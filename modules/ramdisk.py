@@ -114,8 +114,7 @@ def _attach_imdisk_with_retry(
     details = "unknown ImDisk error"
     if last_result is not None:
         details = (
-            f"stdout={last_result.stdout.strip()} "
-            f"stderr={last_result.stderr.strip()}"
+            f"stdout={last_result.stdout.strip()} stderr={last_result.stderr.strip()}"
         )
     msg = f"Failed to create Windows RAM disk at {drive} (size {size}). {details}"
     raise RuntimeError(msg)

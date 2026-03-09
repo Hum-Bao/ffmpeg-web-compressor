@@ -8,12 +8,72 @@ No temporary files are ever created.
 """
 
 import argparse
+import ipaddress
 import logging
 import tempfile
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import NameOID
 from flask import Flask, Request
 
 from modules import api, configureos, exif
+
+APP_DIR = Path(__file__).resolve().parent
+CERT_PATH = APP_DIR / "cert.pem"
+KEY_PATH = APP_DIR / "key.pem"
+
+
+def _ensure_ssl_certificates(logger: logging.Logger) -> tuple[str, str]:
+    """Create self-signed HTTPS cert/key on first run and return their paths."""
+    if CERT_PATH.exists() and KEY_PATH.exists():
+        return str(CERT_PATH), str(KEY_PATH)
+
+    logger.info("Generating self-signed HTTPS certificate for first run")
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+
+    subject = issuer = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "ffmpeg-web-compressor"),
+            x509.NameAttribute(NameOID.COMMON_NAME, "localhost"),
+        ],
+    )
+
+    now = datetime.now(UTC)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - timedelta(minutes=1))
+        .not_valid_after(now + timedelta(days=3650))
+        .add_extension(
+            x509.SubjectAlternativeName(
+                [
+                    x509.DNSName("localhost"),
+                    x509.IPAddress(ipaddress.ip_address("127.0.0.1")),
+                ],
+            ),
+            critical=False,
+        )
+        .sign(private_key, hashes.SHA256())
+    )
+
+    KEY_PATH.write_bytes(
+        private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption(),
+        ),
+    )
+    CERT_PATH.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+    logger.info("Generated HTTPS certificate and key: %s, %s", CERT_PATH, KEY_PATH)
+    return str(CERT_PATH), str(KEY_PATH)
 
 
 class RamBackedRequest(Request):
@@ -63,6 +123,7 @@ if __name__ == "__main__":
         logger.info("EXIF dump logging enabled")
 
     configureos.configure_runtime(logger)
+    cert_file, key_file = _ensure_ssl_certificates(logger)
 
     # Use pre-generated self-signed certificates for HTTPS
     # (adhoc context was causing startup hangs on some systems)
@@ -72,5 +133,5 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=5000,
         debug=False,
-        ssl_context=("cert.pem", "key.pem"),
+        ssl_context=(cert_file, key_file),
     )
