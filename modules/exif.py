@@ -1,6 +1,7 @@
 """ExifTool helpers for metadata restoration and debug dumps."""
 
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -11,7 +12,8 @@ logger = logging.getLogger(__name__)
 
 EXIFTOOL_BIN = shutil.which("exiftool") or "exiftool"
 
-EXIF_DUMP_LOG_DIR = Path("logs/exif_dumps")
+EXIF_DUMP_DIR_ENV_VAR = "FFMPEG_WEB_EXIF_DUMP_DIR"
+DEFAULT_EXIF_DUMP_LOG_DIR = Path("logs/exif_dumps")
 _EXIF_SETTINGS: dict[str, bool] = {"dump_enabled": False}
 
 
@@ -37,8 +39,15 @@ def _build_exif_dump_filename(video_path: str, title: str) -> str:
 def _write_exif_dump_file(video_path: str, title: str, dump_text: str) -> None:
     """Write EXIF dump output to a log file."""
     try:
-        EXIF_DUMP_LOG_DIR.mkdir(parents=True, exist_ok=True)
-        dump_file = EXIF_DUMP_LOG_DIR / _build_exif_dump_filename(video_path, title)
+        configured_dir = os.environ.get(EXIF_DUMP_DIR_ENV_VAR, "").strip()
+        dump_dir = (
+            Path(configured_dir).expanduser()
+            if configured_dir
+            else DEFAULT_EXIF_DUMP_LOG_DIR
+        )
+
+        dump_dir.mkdir(parents=True, exist_ok=True)
+        dump_file = dump_dir / _build_exif_dump_filename(video_path, title)
         dump_file.write_text(dump_text, encoding="utf-8")
         logger.info("Wrote EXIF dump log: %s", dump_file)
     except OSError:

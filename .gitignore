@@ -5,3 +5,7 @@
 
 #Log folder
 /logs
+
+#Certs
+cert.pem
+key.pem

@@ -33,6 +33,19 @@ OUTPUT_MUXER_BY_CONTAINER = {
     "m4v": "mp4",
 }
 
+IOS_HEVC_TAG_CONTAINERS = {"mp4", "m4v", "mov"}
+AUDIO_COMPAT_ARGS_BY_CONTAINER = {
+    "mp4": ["-c:a", "aac", "-b:a", "160k"],
+    "m4v": ["-c:a", "aac", "-b:a", "160k"],
+    "mov": ["-c:a", "aac", "-b:a", "160k"],
+    "mkv": ["-c:a", "aac", "-b:a", "160k"],
+    "avi": ["-c:a", "aac", "-b:a", "160k"],
+    "webm": ["-c:a", "libopus", "-b:a", "128k"],
+    "wmv": ["-c:a", "wmav2", "-b:a", "160k"],
+    "flv": ["-c:a", "aac", "-b:a", "128k"],
+}
+DEFAULT_AUDIO_COMPAT_ARGS = ["-c:a", "aac", "-b:a", "160k"]
+
 QUALITY_MAP = {
     "less_space": {
         "h264_crf": "28",
@@ -353,8 +366,16 @@ def _is_hw_encoder(encoder: str) -> bool:
     return any(name in encoder for name in ("nvenc", "qsv", "vaapi"))
 
 
+def _is_h264_codec(codec: str) -> bool:
+    return "264" in codec or "h264" in codec
+
+
+def _is_h265_codec(codec: str) -> bool:
+    return "265" in codec or "hevc" in codec
+
+
 def _is_hevc_encoder(encoder: str, target_codec: str) -> bool:
-    return "265" in target_codec or "hevc" in encoder
+    return _is_h265_codec(target_codec) or "hevc" in encoder
 
 
 def _add_encoder_quality_args(
@@ -409,36 +430,27 @@ def _add_ios_codec_compatibility_args(
     container: str,
 ) -> None:
     """Append iOS playback compatibility args for selected video codec."""
-    if "264" in selected_codec or "h264" in selected_codec:
+    if _is_h264_codec(selected_codec):
         if "nvenc" in selected_codec:
             cmd.extend(["-profile:v", "main", "-level:v", "4.1"])
         else:
             cmd.extend(["-profile:v", "main", "-level", "4.1"])
         return
 
-    if "265" in selected_codec or "hevc" in selected_codec:
+    if _is_h265_codec(selected_codec):
         if "nvenc" in selected_codec:
             cmd.extend(["-profile:v", "main", "-level:v", "5.1"])
         else:
             cmd.extend(["-profile:v", "main", "-level", "5.1"])
 
-        if container.lower() in ["mp4", "m4v", "mov"]:
+        if container.lower() in IOS_HEVC_TAG_CONTAINERS:
             cmd.extend(["-tag:v", "hvc1"])
 
 
 def _compat_audio_args_for_container(container: str) -> list[str]:
     """Return fallback audio codec args compatible with the target container."""
     normalized = container.lower()
-    if normalized in ["mp4", "m4v", "mov", "mkv", "avi"]:
-        return ["-c:a", "aac", "-b:a", "160k"]
-    if normalized == "webm":
-        return ["-c:a", "libopus", "-b:a", "128k"]
-    if normalized == "wmv":
-        return ["-c:a", "wmav2", "-b:a", "160k"]
-    if normalized == "flv":
-        return ["-c:a", "aac", "-b:a", "128k"]
-
-    return ["-c:a", "aac", "-b:a", "160k"]
+    return AUDIO_COMPAT_ARGS_BY_CONTAINER.get(normalized, DEFAULT_AUDIO_COMPAT_ARGS)
 
 
 def _add_audio_args(cmd: list[str], container: str, audio_mode: str) -> None:

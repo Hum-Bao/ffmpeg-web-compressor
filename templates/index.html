@@ -121,6 +121,37 @@
             margin-bottom: 0;
         }
 
+        /* Tabs */
+        .upload-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
         /* File Upload Section */
         .upload-section {
             background: var(--surface);
@@ -131,6 +162,11 @@
             cursor: pointer;
             transition: all 0.2s;
             margin-bottom: 14px;
+            display: none;
+        }
+
+        .upload-section.active {
+            display: block;
         }
 
         .upload-section:hover {
@@ -147,6 +183,266 @@
             pointer-events: none;
             opacity: 0.7;
             border-color: var(--success);
+        }
+
+        /* Batch Upload Specific */
+        .batch-upload-list {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 14px;
+            margin-top: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .batch-upload-list.active {
+            display: block;
+        }
+
+        .batch-item {
+            background: var(--surface-light);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .batch-item-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .batch-item.active {
+            outline: 2px solid var(--primary);
+        }
+
+        .batch-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .batch-item-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text-secondary);
+        }
+
+        .batch-item-status {
+            margin-left: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            min-width: 70px;
+            text-align: right;
+        }
+
+        .batch-item-status.pending {
+            color: var(--text-secondary);
+        }
+
+        .batch-item-status.processing {
+            color: var(--primary);
+        }
+
+        .batch-item-status.success {
+            color: var(--success);
+        }
+
+        .batch-item-status.error {
+            color: #ef4444;
+        }
+
+        .batch-item-actions {
+            margin-left: 10px;
+        }
+
+        .batch-item-progress {
+            margin-top: 8px;
+            width: 100%;
+            height: 8px;
+            background: #0f172a;
+            border-radius: 999px;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+        }
+
+        .batch-item-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            transition: width 0.2s ease;
+        }
+
+        .batch-item-progress-text {
+            margin-top: 4px;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            min-height: 0.9rem;
+        }
+
+        .batch-mini-btn {
+            padding: 6px 10px;
+            font-size: 0.76rem;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .batch-mini-btn:hover {
+            border-color: var(--primary);
+            background: var(--surface-light);
+        }
+
+        .batch-controls {
+            display: none;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .batch-controls.active {
+            display: flex;
+        }
+
+        .batch-btn {
+            flex: 1;
+            padding: 12px 16px;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .batch-btn:hover {
+            border-color: var(--primary);
+            background: var(--surface-light);
+        }
+
+        .batch-btn.primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .batch-btn.primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .batch-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .batch-config-panel {
+            background: var(--surface);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        .batch-config-panel.visible {
+            display: block;
+        }
+
+        .batch-config-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .batch-config-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .batch-config-label {
+            font-size: 0.76rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            font-weight: 600;
+            min-width: 86px;
+        }
+
+        .batch-config-file {
+            flex: 1;
+            font-size: 0.9rem;
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .batch-nav-btn,
+        .batch-mode-btn {
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--surface-light);
+            color: var(--text);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .batch-mode-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .batch-nav-btn:disabled,
+        .batch-mode-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .batch-preset-btn {
+            width: 100%;
+            padding: 9px 10px;
+            border: 1px solid var(--border);
+            background: var(--surface-light);
+            color: var(--text);
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .batch-preset-btn:hover {
+            border-color: var(--primary);
+        }
+
+        .batch-download-all-btn {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--success);
+            background: rgba(16, 185, 129, 0.15);
+            color: #6ee7b7;
+            border-radius: 8px;
+            font-size: 0.86rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: none;
+        }
+
+        .batch-download-all-btn.visible {
+            display: block;
+        }
+
+        .batch-download-all-btn:hover {
+            background: rgba(16, 185, 129, 0.22);
         }
 
         .upload-icon {
@@ -771,13 +1067,56 @@
             </div>
         </div>
 
-        <!-- File Upload -->
-        <div class="upload-section" id="uploadSection">
+        <!-- Upload Mode Tabs -->
+        <div class="upload-tabs">
+            <button class="tab-btn active" id="singleTab" onclick="switchUploadMode('single')">Single File</button>
+            <button class="tab-btn" id="batchTab" onclick="switchUploadMode('batch')">Batch Upload</button>
+        </div>
+
+        <!-- Single File Upload -->
+        <div class="upload-section active" id="singleUploadSection">
             <div class="upload-icon">📁</div>
             <div class="upload-text">Click to upload or drag & drop</div>
             <div class="upload-hint" id="uploadHint" style="font-size: 0.85rem; color: #888; margin-top: 5px; display: none;">iOS: Video preview is normal, upload starts automatically</div>
             <div class="filename" id="filename"></div>
             <input type="file" id="fileInput" accept="video/mp4,video/quicktime,video/x-m4v,video/*" multiple="false">
+        </div>
+
+        <!-- Batch Upload -->
+        <div class="upload-section" id="batchUploadSection">
+            <div class="upload-icon">📦</div>
+            <div class="upload-text">Click to upload or drag & drop multiple files</div>
+            <div class="upload-hint" style="font-size: 0.85rem; color: #888; margin-top: 5px;">Select or drag multiple video files for batch processing</div>
+            <input type="file" id="batchFileInput" accept="video/mp4,video/quicktime,video/x-m4v,video/*" multiple="true">
+        </div>
+
+        <!-- Batch Upload List -->
+        <div class="batch-upload-list" id="batchUploadList"></div>
+
+        <!-- Batch Controls -->
+        <div class="batch-controls" id="batchControls">
+            <button class="batch-btn" onclick="clearBatchFiles()">Clear</button>
+            <button class="batch-btn primary" id="startBatchBtn" onclick="startBatchConversion()">Start Batch</button>
+        </div>
+
+        <div class="batch-config-panel" id="batchConfigPanel">
+            <div class="batch-config-row">
+                <div class="batch-config-label">Settings</div>
+                <button class="batch-mode-btn active" id="batchModeAllBtn" onclick="setBatchSettingsMode('all')" type="button">One Preset</button>
+                <button class="batch-mode-btn" id="batchModePerFileBtn" onclick="setBatchSettingsMode('per-file')" type="button">Per File</button>
+            </div>
+            <div class="batch-config-row" id="batchFileNavigatorRow" style="display: none;">
+                <div class="batch-config-label">Configuring</div>
+                <button class="batch-nav-btn" id="batchPrevBtn" onclick="navigateBatchFile(-1)" type="button">Prev</button>
+                <div class="batch-config-file" id="batchConfigFilename">-</div>
+                <button class="batch-nav-btn" id="batchNextBtn" onclick="navigateBatchFile(1)" type="button">Next</button>
+            </div>
+            <div class="batch-config-row" id="batchPresetRow">
+                <button class="batch-preset-btn" id="applyPresetToAllBtn" onclick="applyCurrentSettingsToAll()" type="button">Apply current settings to all files</button>
+            </div>
+            <div class="batch-config-row">
+                <button class="batch-download-all-btn" id="downloadAllConvertedBtn" onclick="downloadAllConverted()" type="button">Download All Converted (.zip)</button>
+            </div>
         </div>
 
         <!-- File Info -->
@@ -934,6 +1273,7 @@
         let convertedFilename = null; // Store filename after conversion
         let convertedFileBlob = null; // Cache the file blob for instant sharing (iOS requirement)
         let isConverting = false;
+        const backBtn = document.getElementById('backBtn');
         const DEFAULT_SETTINGS = {
             codec: 'h264',
             resolution: 'original',
@@ -942,6 +1282,7 @@
             quality: 'balanced',
             useHardware: true
         };
+        const QUALITY_LEVELS = ['less_space', 'less_space_plus', 'balanced', 'balanced_plus', 'better_quality'];
         let settings = {
             ...DEFAULT_SETTINGS
         };
@@ -1014,11 +1355,11 @@
         function updateQualityLabel() {
             const slider = document.getElementById('qualitySlider');
             const label = document.getElementById('qualityValue');
-            const qualityMap = ['less_space', 'less_space_plus', 'balanced', 'balanced_plus', 'better_quality'];
             
-            settings.quality = qualityMap[slider.value];
+            settings.quality = QUALITY_LEVELS[slider.value];
             label.textContent = `Quality ${Number(slider.value) + 1}/5`;
             estimateFileSize();
+            persistCurrentBatchSettings();
         }
 
         // Update hardware toggle setting
@@ -1035,35 +1376,592 @@
             document.getElementById('hardwareToggle').addEventListener('change', (e) => {
                 settings.useHardware = e.target.checked;
                 estimateFileSize();
+                persistCurrentBatchSettings();
             });
-        });
-
-        // Clean up files when user leaves page
-        window.addEventListener('beforeunload', () => {
-            const filesToClean = [];
-            if (fileId) filesToClean.push(fileId);
-            if (outputFileId) filesToClean.push(outputFileId);
-            
-            if (filesToClean.length > 0) {
-                // Use sendBeacon for reliable cleanup on page unload
-                const blob = new Blob(
-                    [JSON.stringify({ fileIds: filesToClean })],
-                    { type: 'application/json' }
-                );
-                navigator.sendBeacon('/cleanup', blob);
-            }
         });
 
         // File Upload Handling
         const appContainer = document.querySelector('.container');
-        const uploadSection = document.getElementById('uploadSection');
-        const fileInput = document.getElementById('fileInput');
-        const backBtn = document.getElementById('backBtn');
+        const singleUploadSection = document.getElementById('singleUploadSection');
+        const batchUploadSection = document.getElementById('batchUploadSection');
+        let currentUploadMode = 'single';
+        let batchFiles = [];
+        let selectedBatchFileIndex = 0;
+        let batchSettingsMode = 'all';
+        let batchPresetSettings = { ...DEFAULT_SETTINGS };
+
+        // For backward compatibility, create uploadSection reference to single upload
+        const uploadSection = singleUploadSection;
+
+        function cloneSettingsValue(value) {
+            return {
+                codec: value.codec,
+                resolution: value.resolution,
+                fps: value.fps,
+                container: value.container,
+                quality: value.quality,
+                useHardware: value.useHardware
+            };
+        }
+
+        function settingsForMetadata(metadata) {
+            const next = cloneSettingsValue(DEFAULT_SETTINGS);
+            const sourceCodecRaw = String(metadata?.codec || '').toLowerCase();
+            next.codec = (sourceCodecRaw.includes('hevc') || sourceCodecRaw.includes('h265')) ? 'h265' : 'h264';
+            return next;
+        }
+
+        function collectTrackedFileIds() {
+            const fileIds = [];
+
+            if (fileId) fileIds.push(fileId);
+            if (outputFileId) fileIds.push(outputFileId);
+
+            batchFiles.forEach((fileWrapper) => {
+                if (fileWrapper.fileId) fileIds.push(fileWrapper.fileId);
+                if (fileWrapper.outputFileId) fileIds.push(fileWrapper.outputFileId);
+            });
+
+            return Array.from(new Set(fileIds));
+        }
+
+        function requestCleanup(fileIds) {
+            if (!fileIds || fileIds.length === 0) {
+                return Promise.resolve();
+            }
+
+            return fetch('/cleanup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fileIds: fileIds })
+            }).catch((err) => {
+                console.error('Cleanup request failed:', err);
+            });
+        }
+
+        // Clean up files when user leaves page
+        window.addEventListener('beforeunload', () => {
+            const filesToClean = collectTrackedFileIds();
+            if (filesToClean.length === 0) {
+                return;
+            }
+
+            const blob = new Blob(
+                [JSON.stringify({ fileIds: filesToClean })],
+                { type: 'application/json' }
+            );
+            navigator.sendBeacon('/cleanup', blob);
+        });
+
+        function persistCurrentBatchSettings() {
+            if (currentUploadMode !== 'batch' || !videoMetadata || batchFiles.length === 0) {
+                return;
+            }
+
+            const snapshot = cloneSettingsValue(settings);
+            if (batchSettingsMode === 'all') {
+                batchPresetSettings = snapshot;
+            } else if (batchFiles[selectedBatchFileIndex]) {
+                batchFiles[selectedBatchFileIndex].settings = snapshot;
+            }
+        }
+
+        function updateBatchSettingsModeUi() {
+            const allBtn = document.getElementById('batchModeAllBtn');
+            const perFileBtn = document.getElementById('batchModePerFileBtn');
+            const navigatorRow = document.getElementById('batchFileNavigatorRow');
+            const presetBtn = document.getElementById('applyPresetToAllBtn');
+
+            allBtn.classList.toggle('active', batchSettingsMode === 'all');
+            perFileBtn.classList.toggle('active', batchSettingsMode === 'per-file');
+            navigatorRow.style.display = 'flex';
+            presetBtn.style.display = batchSettingsMode === 'per-file' ? 'block' : 'none';
+        }
+
+        function updateBatchConfigPanel() {
+            const panel = document.getElementById('batchConfigPanel');
+            const filenameLabel = document.getElementById('batchConfigFilename');
+            const prevBtn = document.getElementById('batchPrevBtn');
+            const nextBtn = document.getElementById('batchNextBtn');
+            const downloadAllBtn = document.getElementById('downloadAllConvertedBtn');
+
+            if (currentUploadMode !== 'batch' || batchFiles.length === 0 || !videoMetadata) {
+                panel.classList.remove('visible');
+                return;
+            }
+
+            panel.classList.add('visible');
+            updateBatchSettingsModeUi();
+
+            const convertedCount = batchFiles.filter((fileWrapper) => !!fileWrapper.outputFileId).length;
+            downloadAllBtn.classList.toggle('visible', convertedCount > 0 && !isConverting);
+            downloadAllBtn.disabled = isConverting;
+
+            const current = batchFiles[selectedBatchFileIndex];
+            const countLabel = `${selectedBatchFileIndex + 1}/${batchFiles.length}`;
+            const modePrefix = batchSettingsMode === 'all' ? 'Preset preview: ' : '';
+            filenameLabel.textContent = current ? `${modePrefix}${current.file.name} (${countLabel})` : '-';
+
+            prevBtn.disabled = batchSettingsMode !== 'per-file' || selectedBatchFileIndex <= 0;
+            nextBtn.disabled = batchSettingsMode !== 'per-file' || selectedBatchFileIndex >= batchFiles.length - 1;
+        }
+
+        function setBatchSettingsMode(mode) {
+            if (currentUploadMode !== 'batch' || isConverting) {
+                return;
+            }
+
+            persistCurrentBatchSettings();
+            batchSettingsMode = mode;
+
+            if (mode === 'all') {
+                settings = cloneSettingsValue(batchPresetSettings);
+                setActive('#codecSection', settings.codec);
+                setActive('#resolutionSection', settings.resolution);
+                setActive('#fpsSection', settings.fps);
+                setActive('#containerSection', settings.container);
+                document.getElementById('qualitySlider').value = String(
+                    QUALITY_LEVELS.indexOf(settings.quality)
+                );
+                updateQualityLabel();
+                document.getElementById('hardwareToggle').checked = !!settings.useHardware;
+                updateDisplay();
+                estimateFileSize();
+            } else {
+                loadBatchFileIntoConfigurator(selectedBatchFileIndex);
+                return;
+            }
+
+            updateBatchConfigPanel();
+        }
+
+        function loadBatchFileIntoConfigurator(index) {
+            if (!batchFiles[index] || !batchFiles[index].metadata) {
+                return;
+            }
+
+            selectedBatchFileIndex = index;
+            const selected = batchFiles[index];
+            videoMetadata = selected.metadata;
+            fileId = selected.fileId;
+
+            if (batchSettingsMode === 'all') {
+                settings = cloneSettingsValue(batchPresetSettings);
+            } else {
+                if (!selected.settings) {
+                    selected.settings = settingsForMetadata(selected.metadata);
+                }
+                settings = cloneSettingsValue(selected.settings);
+            }
+
+            setActive('#codecSection', settings.codec);
+            setActive('#resolutionSection', settings.resolution);
+            setActive('#fpsSection', settings.fps);
+            setActive('#containerSection', settings.container);
+
+            const qualityIndex = QUALITY_LEVELS.indexOf(settings.quality);
+            document.getElementById('qualitySlider').value = String(qualityIndex >= 0 ? qualityIndex : 2);
+            updateQualityLabel();
+
+            document.getElementById('hardwareToggle').checked = !!settings.useHardware;
+            displayVideoInfo();
+            enableOptions();
+            updateDisplay();
+            updateBatchList();
+            updateBatchConfigPanel();
+        }
+
+        function navigateBatchFile(delta) {
+            if (batchSettingsMode !== 'per-file' || isConverting) {
+                return;
+            }
+
+            const target = selectedBatchFileIndex + delta;
+            if (target < 0 || target >= batchFiles.length) {
+                return;
+            }
+
+            persistCurrentBatchSettings();
+            loadBatchFileIntoConfigurator(target);
+        }
+
+        function applyCurrentSettingsToAll() {
+            if (currentUploadMode !== 'batch' || batchFiles.length === 0 || isConverting) {
+                return;
+            }
+
+            const snapshot = cloneSettingsValue(settings);
+            batchPresetSettings = snapshot;
+            batchFiles.forEach((fileWrapper) => {
+                fileWrapper.settings = cloneSettingsValue(snapshot);
+            });
+            showStatus('✅ Applied current settings to all files', false);
+            setTimeout(hideStatus, 2500);
+        }
+
+        function resetBatchState() {
+            batchFiles = [];
+            selectedBatchFileIndex = 0;
+            batchSettingsMode = 'all';
+            batchPresetSettings = cloneSettingsValue(DEFAULT_SETTINGS);
+            document.getElementById('batchFileInput').value = '';
+            document.getElementById('batchConfigPanel').classList.remove('visible');
+            document.getElementById('downloadAllConvertedBtn').classList.remove('visible');
+            updateBatchSettingsModeUi();
+            updateBatchList();
+        }
+
+        async function downloadAllConverted() {
+            const convertedIds = batchFiles
+                .map((fileWrapper) => fileWrapper.outputFileId)
+                .filter(Boolean);
+
+            if (convertedIds.length === 0) {
+                showStatus('❌ No converted files are available for batch download.', false);
+                return;
+            }
+
+            const downloadBtn = document.getElementById('downloadAllConvertedBtn');
+            downloadBtn.disabled = true;
+
+            try {
+                showStatus('📦 Preparing zip download...', true);
+                const response = await fetch('/download-batch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ fileIds: convertedIds })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Batch download failed');
+                }
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'converted_batch.zip';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+
+                showStatus('✅ Batch zip download started.', false);
+            } catch (error) {
+                showStatus('❌ Error: ' + error.message, false);
+            } finally {
+                downloadBtn.disabled = false;
+                updateBatchConfigPanel();
+            }
+        }
 
         function setConversionScreenVisible(visible) {
-            uploadSection.style.display = visible ? 'none' : 'block';
+            singleUploadSection.style.display = visible ? 'none' : 'block';
+            batchUploadSection.style.display = visible ? 'none' : 'block';
+            const uploadTabs = document.querySelector('.upload-tabs');
+            if (uploadTabs) uploadTabs.style.display = visible ? 'none' : 'flex';
+
+            if (visible && currentUploadMode === 'batch') {
+                document.getElementById('batchUploadList').style.display = 'block';
+                document.getElementById('batchControls').classList.remove('active');
+            } else {
+                document.getElementById('batchUploadList').style.display = 'none';
+                document.getElementById('batchControls').classList.toggle('active', !visible && currentUploadMode === 'batch' && batchFiles.length > 0);
+            }
+
             backBtn.classList.toggle('visible', visible);
             appContainer.classList.toggle('conversion-mode', visible);
+        }
+
+        function switchUploadMode(mode) {
+            currentUploadMode = mode;
+            document.getElementById('singleTab').classList.toggle('active', mode === 'single');
+            document.getElementById('batchTab').classList.toggle('active', mode === 'batch');
+
+            singleUploadSection.classList.toggle('active', mode === 'single');
+            batchUploadSection.classList.toggle('active', mode === 'batch');
+            document.getElementById('batchUploadList').classList.toggle('active', mode === 'batch');
+            document.getElementById('batchControls').classList.toggle('active', mode === 'batch');
+
+            // Clear selections when switching
+            if (mode === 'batch') {
+                document.getElementById('fileInput').value = '';
+            } else {
+                requestCleanup(collectTrackedFileIds());
+                resetBatchState();
+            }
+        }
+
+        function updateBatchList() {
+            const listContainer = document.getElementById('batchUploadList');
+            listContainer.innerHTML = '';
+            
+            if (batchFiles.length === 0) {
+                listContainer.style.display = 'none';
+                document.getElementById('batchControls').classList.remove('active');
+                return;
+            }
+
+            listContainer.style.display = 'block';
+            document.getElementById('batchControls').classList.add('active');
+
+            batchFiles.forEach((fileWrapper, index) => {
+                const item = document.createElement('div');
+                item.className = 'batch-item';
+                item.id = `batch-item-${index}`;
+                if (index === selectedBatchFileIndex && currentUploadMode === 'batch' && videoMetadata) {
+                    item.classList.add('active');
+                }
+
+                if (batchSettingsMode === 'per-file' && videoMetadata) {
+                    item.style.cursor = 'pointer';
+                    item.addEventListener('click', () => {
+                        if (isConverting) {
+                            return;
+                        }
+                        persistCurrentBatchSettings();
+                        loadBatchFileIntoConfigurator(index);
+                    });
+                }
+
+                const nameSpan = document.createElement('div');
+                nameSpan.className = 'batch-item-name';
+                nameSpan.title = fileWrapper.file.name;
+                nameSpan.textContent = fileWrapper.file.name;
+
+                const statusSpan = document.createElement('div');
+                statusSpan.className = `batch-item-status ${fileWrapper.status}`;
+                statusSpan.id = `batch-status-${index}`;
+                statusSpan.textContent = fileWrapper.statusText || 'Pending';
+
+                const actionsSpan = document.createElement('div');
+                actionsSpan.className = 'batch-item-actions';
+                if (fileWrapper.outputFileId) {
+                    const downloadBtn = document.createElement('button');
+                    downloadBtn.className = 'batch-mini-btn';
+                    downloadBtn.type = 'button';
+                    downloadBtn.textContent = 'Download';
+                    downloadBtn.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        window.location.href = '/download/' + fileWrapper.outputFileId;
+                    });
+                    actionsSpan.appendChild(downloadBtn);
+                }
+
+                const topRow = document.createElement('div');
+                topRow.className = 'batch-item-top';
+                topRow.appendChild(nameSpan);
+                topRow.appendChild(statusSpan);
+                topRow.appendChild(actionsSpan);
+
+                const progressWrap = document.createElement('div');
+                progressWrap.className = 'batch-item-progress';
+                const progressFill = document.createElement('div');
+                progressFill.className = 'batch-item-progress-fill';
+                progressFill.id = `batch-progress-${index}`;
+                progressFill.style.width = `${Math.max(0, Math.min(100, Number(fileWrapper.uploadPercent || 0)))}%`;
+                progressWrap.appendChild(progressFill);
+
+                const progressText = document.createElement('div');
+                progressText.className = 'batch-item-progress-text';
+                progressText.id = `batch-progress-text-${index}`;
+                progressText.textContent = fileWrapper.uploadText || '';
+
+                item.appendChild(topRow);
+                item.appendChild(progressWrap);
+                item.appendChild(progressText);
+                listContainer.appendChild(item);
+            });
+        }
+
+        function addBatchFiles(files) {
+            Array.from(files).forEach(file => {
+                batchFiles.push({
+                    file: file,
+                    status: 'pending',
+                    statusText: 'Pending',
+                    uploadPercent: 0,
+                    uploadText: '',
+                    fileId: null,
+                    metadata: null,
+                    outputFileId: null,
+                    settings: null
+                });
+            });
+            updateBatchList();
+        }
+
+        function clearBatchFiles() {
+            requestCleanup(collectTrackedFileIds());
+            resetBatchState();
+        }
+
+        function updateBatchItemStatus(index, status, statusText) {
+            if (index < batchFiles.length) {
+                batchFiles[index].status = status;
+                batchFiles[index].statusText = statusText;
+                const statusEl = document.getElementById(`batch-status-${index}`);
+                if (statusEl) {
+                    statusEl.className = `batch-item-status ${status}`;
+                    statusEl.textContent = statusText;
+                }
+            }
+        }
+
+        function updateBatchItemProgress(index, percent, text) {
+            if (index >= batchFiles.length) {
+                return;
+            }
+
+            const normalized = Math.max(0, Math.min(100, Number(percent || 0)));
+            batchFiles[index].uploadPercent = normalized;
+            batchFiles[index].uploadText = text || '';
+
+            const progressEl = document.getElementById(`batch-progress-${index}`);
+            if (progressEl) {
+                progressEl.style.width = `${normalized}%`;
+            }
+
+            const progressTextEl = document.getElementById(`batch-progress-text-${index}`);
+            if (progressTextEl) {
+                progressTextEl.textContent = batchFiles[index].uploadText;
+            }
+        }
+
+        async function startBatchConversion() {
+            if (batchFiles.length === 0) {
+                showStatus('❌ No files selected', false);
+                return;
+            }
+
+            document.getElementById('startBatchBtn').disabled = true;
+
+            const results = [];
+            try {
+                // Upload sequentially to avoid exhausting /dev/shm with multiple large files.
+                for (let index = 0; index < batchFiles.length; index += 1) {
+                    const fileWrapper = batchFiles[index];
+                    updateBatchItemStatus(index, 'processing', 'Uploading...');
+                    updateBatchItemProgress(index, 0, 'Waiting for upload');
+                    const result = await uploadBatchFile(fileWrapper, index);
+                    results.push(result);
+                }
+
+                const successCount = results.filter(r => r.success).length;
+                const failedCount = results.length - successCount;
+                if (successCount === 0) {
+                    showStatus('❌ No files could be uploaded', false);
+                    document.getElementById('startBatchBtn').disabled = false;
+                    return;
+                }
+
+                const firstReadyIndex = batchFiles.findIndex((fileWrapper) => !!fileWrapper.fileId && !!fileWrapper.metadata);
+                selectedBatchFileIndex = firstReadyIndex >= 0 ? firstReadyIndex : 0;
+                const firstFile = batchFiles[selectedBatchFileIndex];
+                batchPresetSettings = settingsForMetadata(firstFile.metadata);
+                batchFiles.forEach((fileWrapper) => {
+                    if (fileWrapper.metadata) {
+                        fileWrapper.settings = settingsForMetadata(fileWrapper.metadata);
+                        fileWrapper.outputFileId = null;
+                    }
+                });
+
+                loadBatchFileIntoConfigurator(selectedBatchFileIndex);
+                setBatchSettingsMode('all');
+
+                document.getElementById('infoGrid').classList.add('visible');
+                document.getElementById('settingsDisplay').classList.add('visible');
+                document.getElementById('codecSection').classList.add('visible');
+                document.getElementById('resolutionSection').classList.add('visible');
+                document.getElementById('fpsSection').classList.add('visible');
+                document.getElementById('containerSection').classList.add('visible');
+                document.getElementById('qualitySection').classList.add('visible');
+                document.getElementById('convertBtn').classList.add('visible');
+                document.getElementById('convertBtn').textContent = 'Convert Batch';
+                setConversionScreenVisible(true);
+
+                hideProgress();
+                if (failedCount > 0) {
+                    showStatus(`⚠️ ${successCount} ready, ${failedCount} failed. Pick one preset or configure each file.`, false);
+                } else {
+                    showStatus('✅ Batch is ready. Pick one preset or configure each file.', false);
+                }
+                setTimeout(hideStatus, 3000);
+            } catch (error) {
+                showStatus('❌ Batch upload failed: ' + error.message, false);
+            }
+
+            document.getElementById('startBatchBtn').disabled = false;
+        }
+
+        function uploadBatchFile(fileWrapper, index) {
+            return new Promise((resolve) => {
+                const formData = new FormData();
+                formData.append('file', fileWrapper.file);
+                formData.append('clientSizeBytes', String(fileWrapper.file.size || 0));
+                formData.append('clientMimeType', String(fileWrapper.file.type || ''));
+
+                const xhr = new XMLHttpRequest();
+
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (!e.lengthComputable) {
+                        return;
+                    }
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    updateBatchItemProgress(
+                        index,
+                        percentComplete,
+                        `Uploading ${Math.round(percentComplete)}%`
+                    );
+                });
+
+                xhr.upload.addEventListener('load', () => {
+                    updateBatchItemProgress(index, 100, 'Analyzing metadata...');
+                });
+
+                xhr.addEventListener('load', function() {
+                    if (xhr.status === 200) {
+                        try {
+                            const metadata = JSON.parse(xhr.responseText);
+                            fileWrapper.fileId = metadata.fileId;
+                            fileWrapper.metadata = metadata;
+                            fileWrapper.settings = settingsForMetadata(metadata);
+                            updateBatchItemStatus(index, 'success', '✓ Ready');
+                            updateBatchItemProgress(index, 100, 'Upload complete');
+                            resolve({ success: true, index: index, metadata: metadata });
+                        } catch (error) {
+                            updateBatchItemStatus(index, 'error', 'Analysis failed');
+                            updateBatchItemProgress(index, fileWrapper.uploadPercent || 0, 'Metadata parse failed');
+                            resolve({ success: false, index: index, error: error.message });
+                        }
+                    } else {
+                        let errorText = 'Upload failed';
+                        try {
+                            const payload = JSON.parse(xhr.responseText || '{}');
+                            if (payload.error) {
+                                errorText = String(payload.error);
+                            }
+                        } catch (_err) {
+                            // keep default error text
+                        }
+
+                        updateBatchItemStatus(index, 'error', 'Upload failed');
+                        updateBatchItemProgress(index, fileWrapper.uploadPercent || 0, errorText);
+                        resolve({ success: false, index: index, error: errorText });
+                    }
+                });
+
+                xhr.addEventListener('error', () => {
+                    updateBatchItemStatus(index, 'error', 'Network error');
+                    updateBatchItemProgress(index, fileWrapper.uploadPercent || 0, 'Network error');
+                    resolve({ success: false, index: index, error: 'Network error' });
+                });
+
+                xhr.open('POST', '/analyze');
+                xhr.send(formData);
+            });
         }
 
         function resetOptionSelections() {
@@ -1094,8 +1992,10 @@
             document.getElementById('fpsSection').classList.remove('visible');
             document.getElementById('containerSection').classList.remove('visible');
             document.getElementById('qualitySection').classList.remove('visible');
+            document.getElementById('batchConfigPanel').classList.remove('visible');
             document.getElementById('convertBtn').classList.remove('visible');
             document.getElementById('convertBtn').style.display = 'block';
+            document.getElementById('convertBtn').textContent = 'Convert';
             document.getElementById('downloadButtons').style.display = 'none';
         }
 
@@ -1105,22 +2005,14 @@
                 return;
             }
 
-            const fileIdsToClean = [fileId, outputFileId].filter(Boolean);
-            if (fileIdsToClean.length > 0) {
-                fetch('/cleanup', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fileIds: fileIdsToClean })
-                }).catch((err) => {
-                    console.error('Cleanup on back navigation failed:', err);
-                });
-            }
+            requestCleanup(collectTrackedFileIds());
 
             videoMetadata = null;
             fileId = null;
             outputFileId = null;
             convertedFilename = null;
             convertedFileBlob = null;
+            resetBatchState();
 
             hideConversionSections();
             setConversionScreenVisible(false);
@@ -1143,6 +2035,8 @@
 
         backBtn.addEventListener('click', backToFileSelect);
 
+        // Single file upload listeners
+        const fileInput = document.getElementById('fileInput');
         uploadSection.addEventListener('click', () => fileInput.click());
 
         uploadSection.addEventListener('dragover', (e) => {
@@ -1206,6 +2100,33 @@
             handleFileUpload(file);
         });
 
+        // Batch file upload listeners
+        const batchFileInput = document.getElementById('batchFileInput');
+        batchUploadSection.addEventListener('click', () => batchFileInput.click());
+
+        batchUploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            batchUploadSection.classList.add('drag-over');
+        });
+
+        batchUploadSection.addEventListener('dragleave', () => {
+            batchUploadSection.classList.remove('drag-over');
+        });
+
+        batchUploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            batchUploadSection.classList.remove('drag-over');
+            if (e.dataTransfer.files.length) {
+                addBatchFiles(e.dataTransfer.files);
+            }
+        });
+
+        batchFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                addBatchFiles(e.target.files);
+            }
+        });
+
         function handleFileUpload(file) {
             showProgress(0, 'Uploading...');
 
@@ -1251,6 +2172,7 @@
                         document.getElementById('containerSection').classList.add('visible');
                         document.getElementById('qualitySection').classList.add('visible');
                         document.getElementById('convertBtn').classList.add('visible');
+                        document.getElementById('convertBtn').textContent = 'Convert';
                         setConversionScreenVisible(true);
                         
                         uploadSection.classList.remove('uploading');
@@ -1357,6 +2279,7 @@
             setActive('#codecSection', codec);
             estimateFileSize();
             updateDisplay();
+            persistCurrentBatchSettings();
         }
 
         function selectResolution(res) {
@@ -1364,6 +2287,7 @@
             setActive('#resolutionSection', res);
             estimateFileSize();
             updateDisplay();
+            persistCurrentBatchSettings();
         }
 
         function selectFps(fps) {
@@ -1371,12 +2295,14 @@
             setActive('#fpsSection', fps);
             estimateFileSize();
             updateDisplay();
+            persistCurrentBatchSettings();
         }
 
         function selectContainer(container) {
             settings.container = container;
             setActive('#containerSection', container);
             updateDisplay();
+            persistCurrentBatchSettings();
         }
 
         function setActive(selector, value) {
@@ -1575,28 +2501,13 @@
             }
         }
 
-        async function convertVideo() {
-            const btn = document.getElementById('convertBtn');
-            btn.disabled = true;
-            backBtn.disabled = true;
-            isConverting = true;
-
-            // 1. Request the screen to stay awake
-            await requestWakeLock();
-
-                btn.innerHTML = '<span class="spinner"></span>Converting...';
-            showStatus('Converting video... this may take a while', true);
-            
-            // Show progress bar immediately at 0%
-            showProgress(0, 'Starting conversion...');
-
-            // Use Server-Sent Events for real-time progress updates
+        async function convertOneFile(targetFileId, targetMetadata, targetSettings, labelPrefix = 'Converting') {
             let eventSource = null;
             let progressPollInterval = null;
             let streamRetryTimer = null;
             let conversionDone = false;
-            const progressUrl = '/progress/' + fileId;
-            const streamUrl = '/progress/stream/' + fileId;
+            const progressUrl = '/progress/' + targetFileId;
+            const streamUrl = '/progress/stream/' + targetFileId;
 
             const cleanupProgressWatchers = () => {
                 if (eventSource) {
@@ -1628,7 +2539,7 @@
 
                     showProgress(
                         data.percent,
-                        `Converting: ${speed} | ${frameText} | ${Number(data.percent).toFixed(1)}%`
+                        `${labelPrefix}: ${speed} | ${frameText} | ${Number(data.percent).toFixed(1)}%`
                     );
                 }
 
@@ -1640,7 +2551,7 @@
 
             const startProgressStream = () => {
                 eventSource = new EventSource(streamUrl);
-                
+
                 eventSource.onmessage = (event) => {
                     try {
                         const data = JSON.parse(event.data);
@@ -1649,11 +2560,10 @@
                         console.error('Progress stream parsing error:', err);
                     }
                 };
-                
+
                 eventSource.onerror = (err) => {
                     console.error('Progress stream error:', err);
 
-                    // Safari/mobile can intermittently drop SSE; retry while conversion is active.
                     if (eventSource) {
                         eventSource.close();
                         eventSource = null;
@@ -1691,7 +2601,6 @@
                 }, 1200);
             };
 
-            // Start streaming progress
             startProgressStream();
             startProgressPolling();
 
@@ -1702,105 +2611,170 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        fileId: fileId,
-                        codec: settings.codec,
-                        resolution: settings.resolution,
-                        fps: settings.fps,
-                        container: settings.container === 'original' 
-                            ? (videoMetadata.container || 'mp4') 
-                            : settings.container,
-                        quality: settings.quality,
-                        useHardware: settings.useHardware
+                        fileId: targetFileId,
+                        codec: targetSettings.codec,
+                        resolution: targetSettings.resolution,
+                        fps: targetSettings.fps,
+                        container: targetSettings.container === 'original'
+                            ? (targetMetadata.container || 'mp4')
+                            : targetSettings.container,
+                        quality: targetSettings.quality,
+                        useHardware: targetSettings.useHardware
                     })
                 });
 
                 conversionDone = true;
                 cleanupProgressWatchers();
 
-                if (!response.ok) throw new Error('Conversion failed');
+                if (!response.ok) {
+                    throw new Error('Conversion failed');
+                }
 
                 const result = await response.json();
-                
-                // Show 100% complete
-                showProgress(100, 'Conversion complete: 100%');
-                
-                // Clear input file ID (already cleaned up by backend)
-                fileId = null;
-                
-                // Store filename for download/share
-                outputFileId = result.filename;
-                convertedFilename = result.filename;
-
-                
-                // Pre-fetch the file blob for instant sharing (iOS requirement)
-                // This keeps the file in memory so share doesn't need async fetch
-                try {
-                    console.log('Pre-fetching converted file for sharing...');
-                    const fileResponse = await fetch('/download/' + convertedFilename);
-                    if (fileResponse.ok) {
-                        convertedFileBlob = await fileResponse.blob();
-                        console.log('File pre-fetched for sharing:', convertedFileBlob.size, 'bytes');
-                    }
-                } catch (err) {
-                    console.warn('Failed to pre-fetch file:', err);
-                    convertedFileBlob = null;
-                }
-                
-                // Hide progress
-                setTimeout(() => {
-                    hideProgress();
-                }, 500);
-                
-                // Show download/share buttons
-                document.getElementById('convertBtn').style.display = 'none';
-                document.getElementById('downloadButtons').style.display = 'flex';
-                
-                // Detect iPhone/iPad Safari
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-                const hasShareAPI = !!navigator.share;
-                
-                console.log('iOS device:', isIOS);
-                console.log('Share API available:', hasShareAPI);
-                console.log('User agent:', navigator.userAgent);
-                
-                // On iOS with Share API: Hide download, show only share
-                // On other devices: Show both buttons
-                if (isIOS && hasShareAPI) {
-                    document.getElementById('downloadBtn').style.display = 'none';
-                    document.getElementById('shareBtn').style.display = 'block';
-                    showStatus('✅ Conversion complete! Tap Share to save to Photos.', false);
-                    console.log('iOS: Showing share button only');
-                } else if (hasShareAPI) {
-                    document.getElementById('downloadBtn').style.display = 'block';
-                    document.getElementById('shareBtn').style.display = 'block';
-                    showStatus('✅ Conversion complete! Choose download or share.', false);
-                    console.log('Desktop with share: Showing both buttons');
-                } else {
-                    document.getElementById('downloadBtn').style.display = 'block';
-                    document.getElementById('shareBtn').style.display = 'none';
-                    showStatus('✅ Conversion complete! Download started.', false);
-                    console.log('No share API: Download only');
-                }
-                btn.innerHTML = 'Convert';
-                btn.disabled = false;
-                backBtn.disabled = false;
-                isConverting = false;
-
-                // 2. Release the lock on success
-                releaseWakeLock();
+                showProgress(100, `${labelPrefix}: complete`);
+                return result;
             } catch (error) {
                 conversionDone = true;
                 cleanupProgressWatchers();
+                throw error;
+            }
+        }
+
+        async function convertVideo() {
+            const btn = document.getElementById('convertBtn');
+            btn.disabled = true;
+            backBtn.disabled = true;
+            isConverting = true;
+
+            await requestWakeLock();
+
+            btn.innerHTML = '<span class="spinner"></span>Converting...';
+            showStatus('Converting video... this may take a while', true);
+            showProgress(0, 'Starting conversion...');
+
+            try {
+                if (currentUploadMode === 'batch') {
+                    persistCurrentBatchSettings();
+
+                    const readyFiles = batchFiles.filter((fileWrapper) => !!fileWrapper.fileId);
+                    if (readyFiles.length === 0) {
+                        throw new Error('No batch files are ready for conversion');
+                    }
+
+                    let successCount = 0;
+                    let failureCount = 0;
+                    let firstOutputId = null;
+
+                    for (let index = 0; index < batchFiles.length; index += 1) {
+                        const fileWrapper = batchFiles[index];
+                        if (!fileWrapper.fileId || !fileWrapper.metadata) {
+                            continue;
+                        }
+
+                        if (batchSettingsMode === 'per-file') {
+                            loadBatchFileIntoConfigurator(index);
+                        }
+
+                        const fileSettings = batchSettingsMode === 'all'
+                            ? cloneSettingsValue(batchPresetSettings)
+                            : cloneSettingsValue(fileWrapper.settings || settingsForMetadata(fileWrapper.metadata));
+
+                        updateBatchItemStatus(index, 'processing', 'Converting...');
+
+                        try {
+                            const result = await convertOneFile(
+                                fileWrapper.fileId,
+                                fileWrapper.metadata,
+                                fileSettings,
+                                `File ${index + 1}/${batchFiles.length}`
+                            );
+
+                            fileWrapper.outputFileId = result.filename;
+                            if (!firstOutputId) {
+                                firstOutputId = result.filename;
+                            }
+                            fileWrapper.fileId = null;
+                            updateBatchItemStatus(index, 'success', '✓ Converted');
+                            successCount += 1;
+                        } catch (error) {
+                            fileWrapper.fileId = null;
+                            updateBatchItemStatus(index, 'error', '✗ Failed');
+                            failureCount += 1;
+                        }
+                    }
+
+                    updateBatchList();
+                    outputFileId = firstOutputId;
+                    convertedFilename = firstOutputId;
+                    convertedFileBlob = null;
+
+                    setTimeout(() => {
+                        hideProgress();
+                    }, 500);
+
+                    if (failureCount === 0) {
+                        showStatus(`✅ Batch conversion complete: ${successCount}/${batchFiles.length} converted.`, false);
+                    } else {
+                        showStatus(`⚠️ Batch complete: ${successCount} converted, ${failureCount} failed.`, false);
+                    }
+
+                    btn.innerHTML = 'Convert Batch';
+                    updateBatchConfigPanel();
+                } else {
+                    const result = await convertOneFile(fileId, videoMetadata, settings, 'Converting');
+
+                    fileId = null;
+                    outputFileId = result.filename;
+                    convertedFilename = result.filename;
+
+                    try {
+                        const fileResponse = await fetch('/download/' + convertedFilename);
+                        if (fileResponse.ok) {
+                            convertedFileBlob = await fileResponse.blob();
+                        }
+                    } catch (err) {
+                        convertedFileBlob = null;
+                    }
+
+                    setTimeout(() => {
+                        hideProgress();
+                    }, 500);
+
+                    document.getElementById('convertBtn').style.display = 'none';
+                    document.getElementById('downloadButtons').style.display = 'flex';
+
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+                        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                    const hasShareAPI = !!navigator.share;
+
+                    if (isIOS && hasShareAPI) {
+                        document.getElementById('downloadBtn').style.display = 'none';
+                        document.getElementById('shareBtn').style.display = 'block';
+                        showStatus('✅ Conversion complete! Tap Share to save to Photos.', false);
+                    } else if (hasShareAPI) {
+                        document.getElementById('downloadBtn').style.display = 'block';
+                        document.getElementById('shareBtn').style.display = 'block';
+                        showStatus('✅ Conversion complete! Choose download or share.', false);
+                    } else {
+                        document.getElementById('downloadBtn').style.display = 'block';
+                        document.getElementById('shareBtn').style.display = 'none';
+                        showStatus('✅ Conversion complete! Download started.', false);
+                    }
+
+                    btn.innerHTML = 'Convert';
+                }
+            } catch (error) {
                 hideProgress();
                 showStatus('❌ Error: ' + error.message, false);
-                btn.innerHTML = 'Convert';
-                btn.disabled = false;
-                backBtn.disabled = false;
-                isConverting = false;
+                btn.innerHTML = currentUploadMode === 'batch' ? 'Convert Batch' : 'Convert';
+            }
 
-                // 3. Release the lock on error
-                releaseWakeLock();
+            btn.disabled = false;
+            backBtn.disabled = false;
+            isConverting = false;
+            releaseWakeLock();
+            if (currentUploadMode === 'batch' && videoMetadata) {
+                updateBatchConfigPanel();
             }
         }
 
@@ -1883,37 +2857,6 @@
                     hideStatus();
                 }
             }
-        }
-
-      function resetAfterDownload() {
-            // 1. Tell the server to delete the file from its RAM immediately
-            if (outputFileId) {
-                fetch('/cleanup', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ fileIds: [outputFileId] })
-                }).then(response => {
-                    if (response.ok) {
-                        console.log('Server memory cleaned successfully.');
-                    }
-                }).catch(err => {
-                    console.error('Failed to trigger server cleanup:', err);
-                });
-            }
-
-            // 2. Reset UI state and clear frontend memory
-            outputFileId = null;
-            convertedFilename = null;
-            convertedFileBlob = null; // Clear blob from browser memory
-
-            document.getElementById('convertBtn').style.display = 'block';
-            document.getElementById('downloadButtons').style.display = 'none';
-
-            setTimeout(() => {
-                hideStatus();
-            }, 3000);
         }
 
         function showStatus(message, loading) {

@@ -28,6 +28,9 @@ PERCENT_PENDING = 0.0
 PERCENT_COMPLETE = 100.0
 POLL_INTERVAL_SECONDS = 0.5
 SSE_MAX_WAIT_CYCLES = 120
+DEFAULT_FRAME = 0
+DEFAULT_TOTAL_FRAMES = 0
+DEFAULT_SPEED = "-"
 
 
 class ProgressPayload(TypedDict):
@@ -45,9 +48,9 @@ def set_progress(
     percent: float,
     status: str,
     duration: float,
-    frame: int = 0,
-    total_frames: int = 0,
-    speed: str = "-",
+    frame: int = DEFAULT_FRAME,
+    total_frames: int = DEFAULT_TOTAL_FRAMES,
+    speed: str = DEFAULT_SPEED,
 ) -> None:
     """Set conversion progress for a file ID."""
     conversion_progress[file_id] = ConversionProgress(
@@ -76,14 +79,7 @@ def update_status(file_id: str, status: str) -> None:
     if not current:
         return
 
-    conversion_progress[file_id] = ConversionProgress(
-        percent=current["percent"],
-        status=status,
-        duration=current["duration"],
-        frame=current["frame"],
-        total_frames=current["total_frames"],
-        speed=current["speed"],
-    )
+    conversion_progress[file_id] = ConversionProgress(**{**current, "status": status})
 
 
 def remove_progress(file_id: str) -> None:
@@ -94,9 +90,9 @@ def remove_progress(file_id: str) -> None:
 def payload(
     percent: float,
     status: str,
-    frame: int = 0,
-    total_frames: int = 0,
-    speed: str = "-",
+    frame: int = DEFAULT_FRAME,
+    total_frames: int = DEFAULT_TOTAL_FRAMES,
+    speed: str = DEFAULT_SPEED,
 ) -> ProgressPayload:
     """Build a progress payload dictionary."""
     return ProgressPayload(
