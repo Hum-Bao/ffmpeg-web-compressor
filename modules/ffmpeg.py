@@ -618,38 +618,60 @@ def build_ffmpeg_command(
     return cmd
 
 
+def _parse_hms_time(value: str) -> float | None:
+    """Parse HH:MM:SS(.sss) time string into elapsed seconds."""
+    match = re.fullmatch(r"(\d+):(\d+):(\d+(?:\.\d+)?)", value)
+    if not match:
+        return None
+
+    hours, minutes, seconds = match.groups()
+    return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+
+
+MICROSECONDS_PER_SECOND = 1_000_000.0
+MILLISECONDS_PER_SECOND = 1_000.0
+NANOSECONDS_PER_SECOND = 1_000_000_000.0
+OUT_TIME_MS_MICROSECOND_THRESHOLD = 1_000_000
+
+
+def _parse_progress_key_value(key: str, value: str) -> float | None:
+    """Parse known FFmpeg -progress key/value fields into seconds."""
+    match key:
+        case "out_time_us":
+            return int(value) / MICROSECONDS_PER_SECOND if value.isdigit() else None
+        case "out_time_ms":
+            if not value.isdigit():
+                return None
+            raw_value = int(value)
+            # Some builds label this *_ms but emit microseconds.
+            if raw_value >= OUT_TIME_MS_MICROSECOND_THRESHOLD:
+                return raw_value / MICROSECONDS_PER_SECOND
+            return raw_value / MILLISECONDS_PER_SECOND
+        case "out_time_ns":
+            return int(value) / NANOSECONDS_PER_SECOND if value.isdigit() else None
+        case "out_time":
+            return _parse_hms_time(value)
+        case _:
+            return None
+
+
 def parse_ffmpeg_progress(stderr_line: str) -> float | None:
     """Parse FFmpeg stderr for time progress and return elapsed seconds."""
-    match = re.search(r"out_time_us=(\d+)", stderr_line)
-    if match:
-        microseconds = int(match.group(1))
-        return microseconds / 1_000_000.0
+    line = stderr_line.strip()
 
-    # Some FFmpeg builds emit out_time_ms (often still in microseconds despite name).
-    match = re.search(r"out_time_ms=(\d+)", stderr_line)
-    if match:
-        raw_value = int(match.group(1))
-        # Treat large values as microseconds; otherwise interpret as milliseconds.
-        if raw_value >= 1_000_000:
-            return raw_value / 1_000_000.0
-        return raw_value / 1_000.0
+    # Fast-path FFmpeg progress key/value lines (out_time_*=...)
+    key, sep, value = line.partition("=")
+    if sep:
+        parsed = _parse_progress_key_value(key, value.strip())
+        if parsed is not None:
+            return parsed
 
-    match = re.search(r"out_time_ns=(\d+)", stderr_line)
-    if match:
-        nanoseconds = int(match.group(1))
-        return nanoseconds / 1_000_000_000.0
+    # Fallback for classic status lines like: ... time=00:00:12.34 ...
+    status_match = re.search(r"\btime=(\d+:\d+:\d+(?:\.\d+)?)", line)
+    if not status_match:
+        return None
 
-    match = re.search(r"out_time=(\d+):(\d+):(\d+(?:\.\d+)?)", stderr_line)
-    if match:
-        hours, minutes, seconds = match.groups()
-        return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
-
-    match = re.search(r"time=(\d+):(\d+):(\d+(?:\.\d+)?)", stderr_line)
-    if match:
-        hours, minutes, seconds = match.groups()
-        return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
-
-    return None
+    return _parse_hms_time(status_match.group(1))
 
 
 _initialize_hw_encoder_cache()

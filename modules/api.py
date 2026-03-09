@@ -321,6 +321,10 @@ def analyze() -> tuple[Response, int]:
         filename = secure_filename(str(file.filename))
         logger.info("Analyzing video: %s", filename)
 
+        client_size_raw = request.form.get("clientSizeBytes", "")
+        client_size_bytes = 0
+        if client_size_raw.isdigit():
+            client_size_bytes = int(client_size_raw)
         input_ext = Path(filename).suffix or ".mp4"
         with tempfile.NamedTemporaryFile(
             delete=False,
@@ -329,6 +333,18 @@ def analyze() -> tuple[Response, int]:
         ) as temp_file:
             temp_filepath = temp_file.name
             file.save(temp_filepath)
+
+        saved_size_bytes = Path(temp_filepath).stat().st_size
+        request_content_length = int(request.content_length or 0)
+        if client_size_bytes > 0 and saved_size_bytes != client_size_bytes:
+            delta = saved_size_bytes - client_size_bytes
+            logger.warning(
+                "Upload size mismatch for %s: saved-client delta=%d bytes (%.2f MiB)",
+                filename,
+                delta,
+                delta / (1024 * 1024),
+            )
+
         exif.log_exif_dump(temp_filepath, "ORIGINAL VIDEO")
 
         meta = ffmpeg.get_video_info(temp_filepath, filename)

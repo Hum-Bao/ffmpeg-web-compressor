@@ -947,6 +947,7 @@
         };
 
         let wakeLock = null;
+        const BYTES_PER_MB = 1000 * 1000;
 
             async function requestWakeLock() {
                 if ('wakeLock' in navigator) {
@@ -1210,6 +1211,8 @@
 
             const formData = new FormData();
             formData.append('file', file);
+            formData.append('clientSizeBytes', String(file.size || 0));
+            formData.append('clientMimeType', String(file.type || ''));
 
             // Use XMLHttpRequest for progress tracking
             const xhr = new XMLHttpRequest();
@@ -1284,7 +1287,7 @@
         }
 
         function displayVideoInfo() {
-            const sizeMB = (videoMetadata.size / (1024 * 1024)).toFixed(2);
+            const sizeMB = (videoMetadata.size / BYTES_PER_MB).toFixed(2);
             document.getElementById('currentSize').textContent = sizeMB + ' MB';
             updateOriginalValueHints();
             estimateFileSize();
@@ -1535,7 +1538,7 @@
             const estimatedBytes = duration > 0
                 ? (estimatedBitrate / 8) * duration
                 : originalSizeBytes;
-            const estimatedMB = (estimatedBytes / (1024 * 1024)).toFixed(2);
+            const estimatedMB = (estimatedBytes / BYTES_PER_MB).toFixed(2);
             
             document.getElementById('estimatedSize').textContent = estimatedMB + ' MB';
 
