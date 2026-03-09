@@ -9,6 +9,7 @@ import logging
 import os
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 RAMDISK_ENV_VAR = "FFMPEG_WEB_RAMDISK_DIR"
@@ -20,6 +21,9 @@ WIN_RAMDISK_FOLDER_ENV = "FFMPEG_WEB_WINDOWS_RAMDISK_FOLDER"
 _DEFAULT_DRIVE = "R:"
 _DEFAULT_FOLDER = "ffmpeg-temp"
 _DEFAULT_SIZE = "8G"
+_MOUNT_READY_TIMEOUT_SECONDS = 8.0
+_MOUNT_READY_POLL_SECONDS = 0.2
+_WINERR_UNRECOGNIZED_FILESYSTEM = 1005
 
 
 def _require_ram_storage() -> bool:
@@ -48,6 +52,48 @@ def _run_imdisk(command: list[str]) -> subprocess.CompletedProcess[str]:
         check=False,
         timeout=30,
     )
+
+
+def _attach_imdisk(
+    *,
+    imdisk_bin: str,
+    drive: str,
+    size: str,
+) -> subprocess.CompletedProcess[str]:
+    """Attach and format a RAM disk using ImDisk."""
+    cmd = [
+        imdisk_bin,
+        "-a",
+        "-s",
+        size,
+        "-m",
+        drive,
+        "-p",
+        "/fs:NTFS /q /y",
+    ]
+    return _run_imdisk(cmd)
+
+
+def _detach_imdisk(*, imdisk_bin: str, drive: str) -> None:
+    """Detach a mounted ImDisk volume if present."""
+    _run_imdisk([imdisk_bin, "-D", "-m", drive])
+
+
+def _wait_for_mount_root(mount_root: Path) -> bool:
+    """Wait briefly for mount root to become available after attachment."""
+    deadline = time.monotonic() + _MOUNT_READY_TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
+        if mount_root.exists():
+            return True
+        time.sleep(_MOUNT_READY_POLL_SECONDS)
+    return mount_root.exists()
+
+
+def _create_workspace_dir(mount_root: Path, folder: str) -> Path:
+    """Create and return writable workspace directory on mounted volume."""
+    ram_dir = mount_root / folder
+    ram_dir.mkdir(parents=True, exist_ok=True)
+    return ram_dir
 
 
 def ensure_windows_ramdisk(logger: logging.Logger) -> None:
@@ -81,8 +127,7 @@ def ensure_windows_ramdisk(logger: logging.Logger) -> None:
     created_mount = False
 
     if not mount_root.exists():
-        cmd = [imdisk_bin, "-a", "-s", size, "-m", drive, "-p", "/fs:NTFS /q /y"]
-        result = _run_imdisk(cmd)
+        result = _attach_imdisk(imdisk_bin=imdisk_bin, drive=drive, size=size)
         if result.returncode != 0 and not mount_root.exists():
             msg = (
                 f"Failed to create Windows RAM disk at {drive} (size {size}). "
@@ -93,8 +138,43 @@ def ensure_windows_ramdisk(logger: logging.Logger) -> None:
         created_mount = True
         logger.info("Created Windows RAM disk at %s (%s)", drive, size)
 
-    ram_dir = mount_root / folder
-    ram_dir.mkdir(parents=True, exist_ok=True)
+    if created_mount and not _wait_for_mount_root(mount_root):
+        msg = f"Windows RAM disk {drive} did not become available in time."
+        raise RuntimeError(msg)
+
+    try:
+        ram_dir = _create_workspace_dir(mount_root, folder)
+    except OSError as exc:
+        # WinError 1005: filesystem not recognized yet (or format failed).
+        if (
+            created_mount
+            and getattr(exc, "winerror", None) == _WINERR_UNRECOGNIZED_FILESYSTEM
+        ):
+            logger.warning(
+                (
+                    "RAM disk %s not ready after creation; "
+                    "reattaching and formatting once."
+                ),
+                drive,
+            )
+            _detach_imdisk(imdisk_bin=imdisk_bin, drive=drive)
+            result = _attach_imdisk(imdisk_bin=imdisk_bin, drive=drive, size=size)
+            if result.returncode != 0:
+                msg = (
+                    "Failed to reinitialize Windows RAM disk at "
+                    f"{drive} (size {size}). "
+                    f"stdout={result.stdout.strip()} stderr={result.stderr.strip()}"
+                )
+                raise RuntimeError(msg) from exc
+
+            if not _wait_for_mount_root(mount_root):
+                msg = f"Windows RAM disk {drive} did not become available after retry."
+                raise RuntimeError(msg) from exc
+
+            ram_dir = _create_workspace_dir(mount_root, folder)
+        else:
+            raise
+
     os.environ[RAMDISK_ENV_VAR] = str(ram_dir)
     logger.info("Using Windows RAM workspace: %s", ram_dir)
 
@@ -102,12 +182,6 @@ def ensure_windows_ramdisk(logger: logging.Logger) -> None:
         return
 
     def _cleanup_mount() -> None:
-        subprocess.run(  # noqa: S603
-            [imdisk_bin, "-D", "-m", drive],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=20,
-        )
+        _detach_imdisk(imdisk_bin=imdisk_bin, drive=drive)
 
     atexit.register(_cleanup_mount)
