@@ -33,6 +33,8 @@ OUTPUT_MUXER_BY_CONTAINER = {
     "m4v": "mp4",
 }
 
+MAX_FFMPEG_THREADS = 8
+
 IOS_HEVC_TAG_CONTAINERS = {"mp4", "m4v", "mov"}
 AUDIO_COMPAT_ARGS_BY_CONTAINER = {
     "mp4": ["-c:a", "aac", "-b:a", "160k"],
@@ -356,10 +358,13 @@ def _select_encoder(codec_name: str, *, use_hardware: bool) -> str:
 
 def _get_usable_cores() -> str:
     """Return CPU cores visible to this process/container for FFmpeg threading."""
+    detected = 4
     try:
-        return str(len(os.sched_getaffinity(0)))
+        detected = len(os.sched_getaffinity(0))
     except AttributeError:
-        return str(os.cpu_count() or 4)
+        detected = os.cpu_count() or 4
+
+    return str(min(detected, MAX_FFMPEG_THREADS))
 
 
 def _is_hw_encoder(encoder: str) -> bool:

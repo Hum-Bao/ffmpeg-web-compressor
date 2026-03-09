@@ -28,6 +28,12 @@ _WINERR_UNRECOGNIZED_FILESYSTEM = 1005
 _WINERR_DEVICE_NOT_READY = 21
 _WINERR_PATH_NOT_FOUND = 3
 
+_runtime_state: dict[str, bool | str | None] = {
+    "created_mount_by_app": False,
+    "active_imdisk_bin": None,
+    "active_drive": None,
+}
+
 
 def _require_ram_storage() -> bool:
     raw = os.environ.get(REQUIRE_RAM_ENV_VAR)
@@ -200,6 +206,9 @@ def ensure_windows_ramdisk(logger: logging.Logger) -> None:
         )
 
         created_mount = True
+        _runtime_state["created_mount_by_app"] = True
+        _runtime_state["active_imdisk_bin"] = imdisk_bin
+        _runtime_state["active_drive"] = drive
         logger.info("Created Windows RAM disk at %s (%s)", drive, size)
 
     try:
@@ -244,10 +253,37 @@ def ensure_windows_ramdisk(logger: logging.Logger) -> None:
     os.environ[RAMDISK_ENV_VAR] = str(ram_dir)
     logger.info("Using Windows RAM workspace: %s", ram_dir)
 
+    # Track values for explicit shutdown cleanup.
+    _runtime_state["active_imdisk_bin"] = imdisk_bin
+    _runtime_state["active_drive"] = drive
+
     if not created_mount:
         return
 
     def _cleanup_mount() -> None:
-        _detach_imdisk(imdisk_bin=imdisk_bin, drive=drive)
+        cleanup_windows_ramdisk(logger)
 
     atexit.register(_cleanup_mount)
+
+
+def cleanup_windows_ramdisk(logger: logging.Logger | None = None) -> bool:
+    """Detach app-created Windows RAM disk immediately when present."""
+    if os.name != "nt":
+        return False
+
+    created_mount_by_app = bool(_runtime_state.get("created_mount_by_app"))
+    if not created_mount_by_app:
+        return False
+
+    imdisk_bin = _runtime_state.get("active_imdisk_bin")
+    drive = _runtime_state.get("active_drive")
+    if not isinstance(imdisk_bin, str) or not isinstance(drive, str):
+        return False
+
+    _detach_imdisk(imdisk_bin=imdisk_bin, drive=drive)
+    _runtime_state["created_mount_by_app"] = False
+
+    if logger is not None:
+        logger.info("Detached Windows RAM disk: %s", drive)
+
+    return True

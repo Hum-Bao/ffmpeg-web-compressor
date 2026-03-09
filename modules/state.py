@@ -87,6 +87,13 @@ def remove_progress(file_id: str) -> None:
     conversion_progress.pop(file_id, None)
 
 
+def clear_all_progress() -> int:
+    """Clear all conversion progress entries and return removed count."""
+    removed = len(conversion_progress)
+    conversion_progress.clear()
+    return removed
+
+
 def payload(
     percent: float,
     status: str,

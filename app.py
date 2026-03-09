@@ -20,7 +20,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 from flask import Flask, Request
 
-from modules import api, configureos, exif
+from modules import api, cache, configureos, exif, ramdisk, state
 
 APP_DIR = Path(__file__).resolve().parent
 CERT_PATH = APP_DIR / "cert.pem"
@@ -76,6 +76,25 @@ def _ensure_ssl_certificates(logger: logging.Logger) -> tuple[str, str]:
     return str(CERT_PATH), str(KEY_PATH)
 
 
+def _graceful_shutdown(logger: logging.Logger) -> None:
+    """Best-effort cleanup for Ctrl+C and normal process exit."""
+    cleaned_files = cache.clear_all_files()
+    removed_progress = state.clear_all_progress()
+    removed_temp_dir = api.cleanup_runtime_temp_dir()
+    detached_ramdisk = ramdisk.cleanup_windows_ramdisk(logger)
+
+    logger.info(
+        (
+            "Shutdown cleanup complete: files=%d, progress_entries=%d, "
+            "temp_dir_removed=%s, ramdisk_detached=%s"
+        ),
+        len(cleaned_files),
+        removed_progress,
+        removed_temp_dir,
+        detached_ramdisk,
+    )
+
+
 class RamBackedRequest(Request):
     """Request class that keeps upload temp streams inside active temp workspace."""
 
@@ -129,9 +148,12 @@ if __name__ == "__main__":
     # (adhoc context was causing startup hangs on some systems)
     # This is needed because iOS won't allow the share button to show on
     # non-HTTPS websites
-    app.run(
-        host="0.0.0.0",
-        port=5000,
-        debug=False,
-        ssl_context=(cert_file, key_file),
-    )
+    try:
+        app.run(
+            host="0.0.0.0",
+            port=5000,
+            debug=False,
+            ssl_context=(cert_file, key_file),
+        )
+    finally:
+        _graceful_shutdown(logger)

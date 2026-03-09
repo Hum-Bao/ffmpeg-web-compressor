@@ -35,6 +35,7 @@ SESSION_DIR_PREFIX = "ffmpeg-web-compressor-"
 DEFAULT_CONTAINER = "mp4"
 DEFAULT_MIMETYPE = "video/mp4"
 DEFAULT_SPEED = "-"
+_runtime_state: dict[str, str | None] = {"active_session_dir": None}
 
 HTTP_OK = 200
 HTTP_BAD_REQUEST = 400
@@ -172,6 +173,7 @@ def _session_temp_dir() -> str:
         return tempfile.gettempdir()
 
     session_dir = tempfile.mkdtemp(prefix=SESSION_DIR_PREFIX, dir=ram_base)
+    _runtime_state["active_session_dir"] = session_dir
     logger.info("Using RAM-backed temp workspace: %s", session_dir)
 
     def _cleanup_session_dir() -> None:
@@ -195,6 +197,17 @@ def _temp_dir() -> str:
 def get_active_temp_dir() -> str:
     """Expose active temp dir for startup validation and diagnostics."""
     return _temp_dir()
+
+
+def cleanup_runtime_temp_dir() -> bool:
+    """Delete active per-run temp workspace immediately when present."""
+    session_dir = _runtime_state.get("active_session_dir")
+    if not session_dir:
+        return False
+
+    shutil.rmtree(session_dir, ignore_errors=True)
+    _runtime_state["active_session_dir"] = None
+    return True
 
 
 def _build_ffmpeg_settings(

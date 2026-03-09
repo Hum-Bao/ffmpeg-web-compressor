@@ -68,6 +68,12 @@ def cleanup_files(file_ids: list[str]) -> list[str]:
     return cleaned
 
 
+def clear_all_files() -> list[str]:
+    """Delete every cached file and clear in-memory cache entries."""
+    file_ids = list(file_cache.keys())
+    return cleanup_files(file_ids)
+
+
 def get_cache_status() -> dict[str, int | float | list[dict[str, int | float | str]]]:
     """Build cache status payload with file-level and total size info."""
     files_info: list[dict[str, int | float | str]] = []
