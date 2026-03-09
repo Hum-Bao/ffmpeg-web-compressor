@@ -23,6 +23,7 @@ _DEFAULT_FOLDER = "ffmpeg-temp"
 _DEFAULT_SIZE = "8G"
 _MOUNT_READY_TIMEOUT_SECONDS = 25.0
 _MOUNT_READY_POLL_SECONDS = 0.2
+_ATTACH_RETRIES = 2
 _WINERR_UNRECOGNIZED_FILESYSTEM = 1005
 _WINERR_DEVICE_NOT_READY = 21
 _WINERR_PATH_NOT_FOUND = 3
@@ -79,6 +80,45 @@ def _attach_imdisk(
 def _detach_imdisk(*, imdisk_bin: str, drive: str) -> None:
     """Detach a mounted ImDisk volume if present."""
     _run_imdisk([imdisk_bin, "-D", "-m", drive])
+
+
+def _attach_imdisk_with_retry(
+    *,
+    logger: logging.Logger,
+    imdisk_bin: str,
+    drive: str,
+    size: str,
+) -> None:
+    """Attach ImDisk RAM disk, retrying with cleanup if initial attach fails."""
+    last_result: subprocess.CompletedProcess[str] | None = None
+
+    for attempt in range(1, _ATTACH_RETRIES + 1):
+        # Detach first in case a previous failed run left a stale mapping.
+        _detach_imdisk(imdisk_bin=imdisk_bin, drive=drive)
+
+        result = _attach_imdisk(imdisk_bin=imdisk_bin, drive=drive, size=size)
+        if result.returncode == 0:
+            return
+
+        last_result = result
+        logger.warning(
+            "ImDisk attach attempt %d/%d failed for %s: %s",
+            attempt,
+            _ATTACH_RETRIES,
+            drive,
+            result.stderr.strip() or result.stdout.strip(),
+        )
+
+    # Ensure partial device mappings are cleaned up before surfacing error.
+    _detach_imdisk(imdisk_bin=imdisk_bin, drive=drive)
+    details = "unknown ImDisk error"
+    if last_result is not None:
+        details = (
+            f"stdout={last_result.stdout.strip()} "
+            f"stderr={last_result.stderr.strip()}"
+        )
+    msg = f"Failed to create Windows RAM disk at {drive} (size {size}). {details}"
+    raise RuntimeError(msg)
 
 
 def _create_workspace_dir(mount_root: Path, folder: str) -> Path:
@@ -153,13 +193,12 @@ def ensure_windows_ramdisk(logger: logging.Logger) -> None:
     created_mount = False
 
     if not mount_root.exists():
-        result = _attach_imdisk(imdisk_bin=imdisk_bin, drive=drive, size=size)
-        if result.returncode != 0 and not mount_root.exists():
-            msg = (
-                f"Failed to create Windows RAM disk at {drive} (size {size}). "
-                f"stdout={result.stdout.strip()} stderr={result.stderr.strip()}"
-            )
-            raise RuntimeError(msg)
+        _attach_imdisk_with_retry(
+            logger=logger,
+            imdisk_bin=imdisk_bin,
+            drive=drive,
+            size=size,
+        )
 
         created_mount = True
         logger.info("Created Windows RAM disk at %s (%s)", drive, size)
@@ -182,6 +221,7 @@ def ensure_windows_ramdisk(logger: logging.Logger) -> None:
             _detach_imdisk(imdisk_bin=imdisk_bin, drive=drive)
             result = _attach_imdisk(imdisk_bin=imdisk_bin, drive=drive, size=size)
             if result.returncode != 0:
+                _detach_imdisk(imdisk_bin=imdisk_bin, drive=drive)
                 msg = (
                     "Failed to reinitialize Windows RAM disk at "
                     f"{drive} (size {size}). "
