@@ -1,0 +1,1945 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Converter</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --surface-light: #334155;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --success: #10b981;
+            --border: #475569;
+            --page-pad: 14px;
+            --content-max-width: 600px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: var(--page-pad);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            width: 100%;
+            max-width: var(--content-max-width);
+            padding-top: 62px;
+            padding-bottom: 96px;
+        }
+
+        .container.conversion-mode {
+            padding-top: 228px;
+            padding-bottom: 108px;
+        }
+
+        .container.conversion-mode::before {
+            content: "";
+            position: fixed;
+            top: var(--page-pad);
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(var(--content-max-width), calc(100vw - (var(--page-pad) * 2)));
+            height: 206px;
+            background: var(--bg);
+            z-index: 27;
+            pointer-events: none;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.5rem;
+            margin-bottom: 14px;
+            font-weight: 600;
+        }
+
+        .header-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            position: fixed;
+            top: var(--page-pad);
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(var(--content-max-width), calc(100vw - (var(--page-pad) * 2)));
+            z-index: 30;
+            background: var(--bg);
+            padding: 6px 0;
+        }
+
+        .back-btn {
+            width: 36px;
+            height: 36px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+            color: var(--text);
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        .back-btn.visible {
+            display: inline-flex;
+        }
+
+        .back-btn:hover {
+            background: var(--surface-light);
+        }
+
+        .back-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .title-wrap {
+            flex: 1;
+        }
+
+        .title-wrap h1 {
+            margin-bottom: 0;
+        }
+
+        /* File Upload Section */
+        .upload-section {
+            background: var(--surface);
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 28px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 14px;
+        }
+
+        .upload-section:hover {
+            border-color: var(--primary);
+            background: var(--surface-light);
+        }
+
+        .upload-section.drag-over {
+            border-color: var(--primary);
+            background: var(--surface-light);
+        }
+
+        .upload-section.uploading {
+            pointer-events: none;
+            opacity: 0.7;
+            border-color: var(--success);
+        }
+
+        .upload-icon {
+            font-size: 2.4rem;
+            margin-bottom: 6px;
+            opacity: 0.6;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .upload-text {
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .filename {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: var(--success);
+            font-weight: 500;
+        }
+
+        /* Info Boxes */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        .info-grid.visible {
+            display: grid;
+            position: fixed;
+            top: 64px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(var(--content-max-width), calc(100vw - (var(--page-pad) * 2)));
+            z-index: 29;
+            background: var(--bg);
+            padding-bottom: 6px;
+        }
+
+        .info-box {
+            background: var(--surface);
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .info-label {
+            font-size: 0.67rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .info-value {
+            font-size: 1.65rem;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.05;
+        }
+
+        .info-subtext {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .compression-value {
+            font-size: 2rem;
+            color: var(--success);
+        }
+
+        /* Settings Display */
+        .settings-display {
+            background: var(--surface);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        .settings-display.visible {
+            display: block;
+            position: fixed;
+            top: 154px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(var(--content-max-width), calc(100vw - (var(--page-pad) * 2)));
+            z-index: 28;
+            background: var(--bg);
+            padding-top: 6px;
+            padding-bottom: 6px;
+        }
+
+        .settings-grid {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: nowrap;
+        }
+
+        .setting-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            white-space: nowrap;
+            flex: 1;
+            min-width: 0;
+            text-align: center;
+        }
+
+        .setting-label {
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            font-weight: 600;
+            letter-spacing: 0.4px;
+        }
+
+        .setting-value {
+            font-size: 1.08rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        /* Option Sections */
+        .option-section {
+            margin-bottom: 14px;
+            display: none;
+        }
+
+        .option-section.visible {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 7px;
+            font-weight: 600;
+        }
+
+        .option-box {
+            background: var(--surface);
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .option-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 14px 20px;
+            background: var(--surface-light);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .option-main {
+            display: block;
+            line-height: 1.1;
+        }
+
+        .option-sub {
+            display: block;
+            margin-top: 2px;
+            font-size: 0.68rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            line-height: 1.1;
+            min-height: 0.78rem;
+        }
+
+        /* Keep 4-option rows aligned so 'Original' stays centered in its slot. */
+        #resolutionSection .option-box,
+        #containerSection .option-box {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+            align-items: stretch;
+        }
+
+        #resolutionSection .option-btn,
+        #containerSection .option-btn {
+            flex: 1 1 0;
+            min-width: 0;
+            width: auto;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 12px 8px;
+        }
+
+        /* Optical centering tweak for this specific label in this font stack. */
+        #resolutionSection .option-btn[data-value="original"],
+        #containerSection .option-btn[data-value="original"] {
+            text-indent: -0.06em;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            background: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .option-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .option-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* Convert Button */
+        .convert-btn {
+            width: 100%;
+            padding: 18px;
+            background: var(--primary);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 20px;
+            display: none;
+        }
+
+        #convertBtn {
+            position: fixed;
+            bottom: calc(12px + env(safe-area-inset-bottom));
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(var(--content-max-width), calc(100vw - (var(--page-pad) * 2)));
+            z-index: 20;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+            margin-top: 0;
+        }
+
+        .convert-btn.visible {
+            display: block;
+        }
+
+        .convert-btn:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        #convertBtn:hover:not(:disabled) {
+            transform: translateX(-50%);
+        }
+
+        .convert-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Download/Share Buttons Container */
+        #downloadButtons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        #downloadButtons .convert-btn {
+            flex: 1;
+            margin-top: 0;
+            display: block;
+        }
+
+         .skinny-download-btn {
+            width: 60%;
+            margin: 0 auto;
+            padding: 7px 0;
+            background: var(--primary);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: block;
+            min-width: 0;
+            min-height: 0;
+            box-shadow: none;
+        }
+        .skinny-download-btn:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+        .skinny-download-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Quality Slider */
+        .quality-section {
+            margin-top: 25px;
+            padding: 20px;
+            background: var(--surface-light);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: none;
+        }
+
+        .quality-section.visible {
+            display: block;
+        }
+
+        .quality-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .slider-container {
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .quality-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(90deg, #f44336 0%, #ffc107 50%, #4caf50 100%);
+            outline: none;
+            cursor: pointer;
+        }
+
+        .quality-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+            transition: transform 0.2s;
+        }
+
+        .quality-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .quality-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+            border: none;
+            transition: transform 0.2s;
+        }
+
+        .quality-slider::-moz-range-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .slider-labels span {
+            font-weight: 500;
+        }
+
+        .quality-value {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Hardware Acceleration Toggle */
+        .hardware-toggle {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .toggle-label .gpu-icon {
+            margin-right: 8px;
+            font-size: 1.1rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #555;
+            transition: 0.3s;
+            border-radius: 13px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: var(--primary);
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+        .toggle-switch input:disabled + .toggle-slider {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .hw-status {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        .hw-status.available {
+            color: var(--success);
+        }
+
+        .hw-status.unavailable {
+            color: var(--text-secondary);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border-left-color: white;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .status-message {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            display: none;
+        }
+
+        .status-message.visible {
+            display: block;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            width: 100%;
+            background: var(--surface-light);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 20px 0 10px 0;
+            display: none;
+            height: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .progress-container.visible {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            width: 0%;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-top: 10px;
+            display: none;
+        }
+
+        .progress-text.visible {
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .container {
+                max-width: 100%;
+            }
+
+            .container {
+                padding-top: 60px;
+            }
+
+            .container.conversion-mode {
+                padding-top: 216px;
+            }
+
+            .settings-grid {
+                gap: 8px;
+            }
+
+            .setting-label {
+                font-size: 0.56rem;
+            }
+
+            .setting-value {
+                font-size: 0.95rem;
+            }
+
+            .option-btn {
+                min-width: 80px;
+            }
+
+            #resolutionSection .option-box,
+            #containerSection .option-box {
+                flex-wrap: nowrap;
+                gap: 6px;
+            }
+
+            #resolutionSection .option-btn,
+            #containerSection .option-btn {
+                padding: 11px 4px;
+                font-size: 0.86rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header-bar">
+            <button id="backBtn" class="back-btn" type="button" aria-label="Back to file select" title="Back to file select">←</button>
+            <div class="title-wrap">
+                <h1>Configuration</h1>
+            </div>
+        </div>
+
+        <!-- File Upload -->
+        <div class="upload-section" id="uploadSection">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Click to upload or drag & drop</div>
+            <div class="upload-hint" id="uploadHint" style="font-size: 0.85rem; color: #888; margin-top: 5px; display: none;">iOS: Video preview is normal, upload starts automatically</div>
+            <div class="filename" id="filename"></div>
+            <input type="file" id="fileInput" accept="video/mp4,video/quicktime,video/x-m4v,video/*" multiple="false">
+        </div>
+
+        <!-- File Info -->
+        <div class="info-grid" id="infoGrid">
+            <div class="info-box">
+                <div class="info-label">Estimated Size</div>
+                <div class="info-value" id="estimatedSize">0 MB</div>
+                <div class="info-subtext">Original: <span id="currentSize">0 MB</span></div>
+            </div>
+            <div class="info-box">
+                <div class="info-label">Compression</div>
+                <div class="info-value compression-value" id="compression">0%</div>
+            </div>
+        </div>
+
+        <!-- Settings Display -->
+        <div class="settings-display" id="settingsDisplay">
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <div class="setting-label">Resolution</div>
+                    <div class="setting-value" id="displayResolution">-</div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Format</div>
+                    <div class="setting-value" id="displayFormat">-</div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Encoding</div>
+                    <div class="setting-value" id="displayEncoding">-</div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">FPS</div>
+                    <div class="setting-value" id="displayFps">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Codec Selection -->
+        <div class="option-section" id="codecSection">
+            <div class="section-title">Encoding</div>
+            <div class="option-box">
+                <button class="option-btn active" data-value="h264" onclick="selectCodec('h264')">
+                    <span class="option-main">H.264</span>
+                    <span class="option-sub" id="origCodecH264"></span>
+                </button>
+                <button class="option-btn" data-value="h265" onclick="selectCodec('h265')">
+                    <span class="option-main">H.265</span>
+                    <span class="option-sub" id="origCodecH265"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Resolution Selection -->
+        <div class="option-section" id="resolutionSection">
+            <div class="section-title">Resolution</div>
+            <div class="option-box">
+                <button class="option-btn" data-value="720" onclick="selectResolution('720')">720p</button>
+                <button class="option-btn" data-value="1080" onclick="selectResolution('1080')">1080p</button>
+                <button class="option-btn" data-value="2160" onclick="selectResolution('2160')">2160p</button>
+                <button class="option-btn active" data-value="original" onclick="selectResolution('original')">
+                    <span class="option-main">Original</span>
+                    <span class="option-sub" id="origResolutionValue">-</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Frame Rate Selection -->
+        <div class="option-section" id="fpsSection">
+            <div class="section-title">Frame Rate</div>
+            <div class="option-box">
+                <button class="option-btn" data-value="30" onclick="selectFps('30')">30 FPS</button>
+                <button class="option-btn" data-value="60" onclick="selectFps('60')">60 FPS</button>
+                <button class="option-btn active" data-value="original" onclick="selectFps('original')">
+                    <span class="option-main">Original</span>
+                    <span class="option-sub" id="origFpsValue">-</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Container Selection -->
+        <div class="option-section" id="containerSection">
+            <div class="section-title">Container</div>
+            <div class="option-box">
+                <button class="option-btn" data-value="m4v" onclick="selectContainer('m4v')">M4V</button>
+                <button class="option-btn" data-value="mov" onclick="selectContainer('mov')">MOV</button>
+                <button class="option-btn" data-value="mp4" onclick="selectContainer('mp4')">MP4</button>
+                <button class="option-btn active" data-value="original" onclick="selectContainer('original')">
+                    <span class="option-main">Original</span>
+                    <span class="option-sub" id="origContainerValue">-</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Quality Slider -->
+        <div class="quality-section" id="qualitySection">
+            <div class="quality-label">Quality Settings</div>
+            
+            <div class="slider-container">
+                <input type="range" min="0" max="4" value="2" class="quality-slider" id="qualitySlider" oninput="updateQualityLabel()">
+                <div class="slider-labels">
+                    <span>Less Space</span>
+                    <span>Balanced</span>
+                    <span>Better Quality</span>
+                </div>
+                <div class="quality-value" id="qualityValue">Quality 3/5</div>
+            </div>
+
+            <div class="hardware-toggle">
+                <div class="toggle-container">
+                    <div class="toggle-label">
+                        <span class="gpu-icon">🎮</span>
+                        <span>Hardware Acceleration</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="hardwareToggle" checked disabled>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="hw-status" id="hwStatus">Checking GPU...</div>
+            </div>
+        </div>
+
+        <!-- Convert Button -->
+        <button class="convert-btn" id="convertBtn" onclick="convertVideo()">
+            Convert
+        </button>
+
+        <!-- Download/Share Buttons (shown after conversion) -->
+        <div id="downloadButtons" style="display: none;">
+            <button class="convert-btn" id="downloadBtn" onclick="downloadFile()">
+                📥 Download
+            </button>
+            <button class="convert-btn" id="shareBtn" onclick="shareFile()">
+                📤 Share to Photos
+            </button>
+            <button class="skinny-download-btn" id="skinnyDownloadBtn" onclick="downloadFile()" style="display:none; margin-top:6px;">
+                <span style="font-size:0.9em;">Download (if share fails)</span>
+            </button>
+        </div>
+
+        <div class="status-message" id="statusMessage"></div>
+
+        <!-- Conversion Progress (below button) -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="progress-text" id="progressText"></div>
+    </div>
+
+    <script>
+        let videoMetadata = null;
+        let fileId = null;
+        let outputFileId = null; // Track converted file ID
+        let convertedFilename = null; // Store filename after conversion
+        let convertedFileBlob = null; // Cache the file blob for instant sharing (iOS requirement)
+        let isConverting = false;
+        const DEFAULT_SETTINGS = {
+            codec: 'h264',
+            resolution: 'original',
+            fps: 'original',
+            container: 'original',
+            quality: 'balanced',
+            useHardware: true
+        };
+        let settings = {
+            ...DEFAULT_SETTINGS
+        };
+
+        let wakeLock = null;
+
+            async function requestWakeLock() {
+                if ('wakeLock' in navigator) {
+                    try {
+                        wakeLock = await navigator.wakeLock.request('screen');
+                        console.log('Screen wake lock active - phone will not sleep');
+                    } catch (err) {
+                        console.error(`Wake lock failed: ${err.message}`);
+                    }
+                }
+            }
+
+            function releaseWakeLock() {
+                if (wakeLock !== null) {
+                    wakeLock.release().then(() => {
+                        wakeLock = null;
+                        console.log('Screen wake lock released');
+                    });
+                }
+            }
+
+        // Check hardware acceleration availability on page load
+        function checkHardwareStatus() {
+            fetch('/hardware/status')
+                .then(response => response.json())
+                .then(data => {
+                    const hwToggle = document.getElementById('hardwareToggle');
+                    const hwStatus = document.getElementById('hwStatus');
+                    
+                    if (data.has_hardware) {
+                        hwToggle.disabled = false;
+                        hwToggle.checked = true;
+                        settings.useHardware = true;
+                        
+                        const availableCodecs = [];
+                        if (data.h264_available) availableCodecs.push('H.264');
+                        if (data.h265_available) availableCodecs.push('H.265');
+                        
+                        hwStatus.textContent = `GPU Available (${availableCodecs.join(', ')})`;
+                        hwStatus.classList.add('available');
+                        hwStatus.classList.remove('unavailable');
+                    } else {
+                        hwToggle.disabled = true;
+                        hwToggle.checked = false;
+                        settings.useHardware = false;
+                        hwStatus.textContent = 'No GPU detected';
+                        hwStatus.classList.add('unavailable');
+                        hwStatus.classList.remove('available');
+                    }
+                })
+                .catch(err => {
+                    console.error('Hardware check failed:', err);
+                    const hwToggle = document.getElementById('hardwareToggle');
+                    const hwStatus = document.getElementById('hwStatus');
+                    hwToggle.disabled = true;
+                    hwToggle.checked = false;
+                    settings.useHardware = false;
+                    hwStatus.textContent = 'Hardware check failed';
+                    hwStatus.classList.add('unavailable');
+                });
+        }
+
+        // Update quality label based on slider value
+        function updateQualityLabel() {
+            const slider = document.getElementById('qualitySlider');
+            const label = document.getElementById('qualityValue');
+            const qualityMap = ['less_space', 'less_space_plus', 'balanced', 'balanced_plus', 'better_quality'];
+            
+            settings.quality = qualityMap[slider.value];
+            label.textContent = `Quality ${Number(slider.value) + 1}/5`;
+            estimateFileSize();
+        }
+
+        // Update hardware toggle setting
+        document.addEventListener('DOMContentLoaded', () => {
+            checkHardwareStatus();
+            
+            // Show iOS upload hint if on iOS device
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            if (isIOS) {
+                document.getElementById('uploadHint').style.display = 'block';
+            }
+            
+            document.getElementById('hardwareToggle').addEventListener('change', (e) => {
+                settings.useHardware = e.target.checked;
+                estimateFileSize();
+            });
+        });
+
+        // Clean up files when user leaves page
+        window.addEventListener('beforeunload', () => {
+            const filesToClean = [];
+            if (fileId) filesToClean.push(fileId);
+            if (outputFileId) filesToClean.push(outputFileId);
+            
+            if (filesToClean.length > 0) {
+                // Use sendBeacon for reliable cleanup on page unload
+                const blob = new Blob(
+                    [JSON.stringify({ fileIds: filesToClean })],
+                    { type: 'application/json' }
+                );
+                navigator.sendBeacon('/cleanup', blob);
+            }
+        });
+
+        // File Upload Handling
+        const appContainer = document.querySelector('.container');
+        const uploadSection = document.getElementById('uploadSection');
+        const fileInput = document.getElementById('fileInput');
+        const backBtn = document.getElementById('backBtn');
+
+        function setConversionScreenVisible(visible) {
+            uploadSection.style.display = visible ? 'none' : 'block';
+            backBtn.classList.toggle('visible', visible);
+            appContainer.classList.toggle('conversion-mode', visible);
+        }
+
+        function resetOptionSelections() {
+            settings = { ...DEFAULT_SETTINGS };
+
+            setActive('#codecSection', settings.codec);
+            setActive('#resolutionSection', settings.resolution);
+            setActive('#fpsSection', settings.fps);
+            setActive('#containerSection', settings.container);
+
+            document.querySelectorAll('#resolutionSection .option-btn, #fpsSection .option-btn').forEach((btn) => {
+                btn.disabled = false;
+            });
+
+            const slider = document.getElementById('qualitySlider');
+            slider.value = '2';
+            updateQualityLabel();
+
+            const hwToggle = document.getElementById('hardwareToggle');
+            settings.useHardware = !hwToggle.disabled && hwToggle.checked;
+        }
+
+        function hideConversionSections() {
+            document.getElementById('infoGrid').classList.remove('visible');
+            document.getElementById('settingsDisplay').classList.remove('visible');
+            document.getElementById('codecSection').classList.remove('visible');
+            document.getElementById('resolutionSection').classList.remove('visible');
+            document.getElementById('fpsSection').classList.remove('visible');
+            document.getElementById('containerSection').classList.remove('visible');
+            document.getElementById('qualitySection').classList.remove('visible');
+            document.getElementById('convertBtn').classList.remove('visible');
+            document.getElementById('convertBtn').style.display = 'block';
+            document.getElementById('downloadButtons').style.display = 'none';
+        }
+
+        function backToFileSelect() {
+            if (isConverting) {
+                showStatus('Please wait for conversion to finish before going back.', false);
+                return;
+            }
+
+            const fileIdsToClean = [fileId, outputFileId].filter(Boolean);
+            if (fileIdsToClean.length > 0) {
+                fetch('/cleanup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fileIds: fileIdsToClean })
+                }).catch((err) => {
+                    console.error('Cleanup on back navigation failed:', err);
+                });
+            }
+
+            videoMetadata = null;
+            fileId = null;
+            outputFileId = null;
+            convertedFilename = null;
+            convertedFileBlob = null;
+
+            hideConversionSections();
+            setConversionScreenVisible(false);
+            hideProgress();
+            hideStatus();
+
+            uploadSection.classList.remove('uploading', 'drag-over');
+            uploadSection.style.pointerEvents = '';
+            fileInput.disabled = false;
+            fileInput.value = '';
+            document.getElementById('filename').textContent = '';
+            document.getElementById('currentSize').textContent = '0 MB';
+            document.getElementById('estimatedSize').textContent = '0 MB';
+            document.getElementById('compression').textContent = '0%';
+            resetOriginalValueHints();
+
+            resetOptionSelections();
+            checkHardwareStatus();
+        }
+
+        backBtn.addEventListener('click', backToFileSelect);
+
+        uploadSection.addEventListener('click', () => fileInput.click());
+
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('drag-over');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('drag-over');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('drag-over');
+            if (e.dataTransfer.files.length) {
+                const file = e.dataTransfer.files[0];
+                
+                // Disable input to prevent multiple selections
+                fileInput.disabled = true;
+                uploadSection.style.pointerEvents = 'none';
+                
+                document.getElementById('filename').textContent = file.name;
+                uploadSection.classList.add('uploading');
+                showProgress(0, 'Preparing upload...');
+                
+                // Start upload immediately
+                handleFileUpload(file);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            // Disable input to prevent multiple selections
+            fileInput.disabled = true;
+            uploadSection.style.pointerEvents = 'none';
+            
+            // Show immediate feedback BEFORE starting upload
+            document.getElementById('filename').textContent = file.name;
+            uploadSection.classList.add('uploading');
+            
+            // iOS-specific: Show hint about preview delay
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            
+            if (isIOS) {
+                showProgress(0, 'Processing video (iOS may show preview)...');
+            } else {
+                showProgress(0, 'Preparing upload...');
+            }
+            
+            // Force blur to help close picker on iOS
+            if (document.activeElement) {
+                document.activeElement.blur();
+            }
+            window.focus();
+            
+            // Start upload immediately (no delay)
+            // The browser will handle the file availability automatically
+            handleFileUpload(file);
+        });
+
+        function handleFileUpload(file) {
+            showProgress(0, 'Uploading...');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Use XMLHttpRequest for progress tracking
+            const xhr = new XMLHttpRequest();
+
+            // Upload progress
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    showProgress(percentComplete, `Uploading: ${Math.round(percentComplete)}%`);
+                }
+            });
+
+            // Upload complete, now analyzing
+            xhr.upload.addEventListener('load', () => {
+                showProgress(100, 'Analyzing video...');
+            });
+
+            xhr.addEventListener('load', function() {
+                if (xhr.status === 200) {
+                    try {
+                        videoMetadata = JSON.parse(xhr.responseText);
+                        fileId = videoMetadata.fileId;
+
+                        // Default codec selection to the source encoding.
+                        applySourceCodecDefault();
+                        
+                        displayVideoInfo();
+                        enableOptions();
+                        updateDisplay();
+                        
+                        document.getElementById('infoGrid').classList.add('visible');
+                        document.getElementById('settingsDisplay').classList.add('visible');
+                        document.getElementById('codecSection').classList.add('visible');
+                        document.getElementById('resolutionSection').classList.add('visible');
+                        document.getElementById('fpsSection').classList.add('visible');
+                        document.getElementById('containerSection').classList.add('visible');
+                        document.getElementById('qualitySection').classList.add('visible');
+                        document.getElementById('convertBtn').classList.add('visible');
+                        setConversionScreenVisible(true);
+                        
+                        uploadSection.classList.remove('uploading');
+                        hideProgress();
+                        showStatus('✅ Ready to convert!', false);
+                        setTimeout(hideStatus, 3000);
+                        // Don't re-enable input - keep disabled after successful upload
+                    } catch (error) {
+                        uploadSection.classList.remove('uploading');
+                        uploadSection.style.pointerEvents = '';
+                        fileInput.disabled = false;
+                        hideProgress();
+                        showStatus('❌ Error analyzing video: ' + error.message, false);
+                    }
+                } else {
+                    uploadSection.classList.remove('uploading');
+                    uploadSection.style.pointerEvents = '';
+                    fileInput.disabled = false;
+                    hideProgress();
+                    showStatus('❌ Upload failed. Please try again.', false);
+                }
+            });
+
+            xhr.addEventListener('error', () => {
+                uploadSection.classList.remove('uploading');
+                uploadSection.style.pointerEvents = '';
+                fileInput.disabled = false;
+                hideProgress();
+                showStatus('❌ Network error. Please check your connection.', false);
+            });
+
+            xhr.open('POST', '/analyze');
+            xhr.send(formData);
+        }
+
+        function displayVideoInfo() {
+            const sizeMB = (videoMetadata.size / (1024 * 1024)).toFixed(2);
+            document.getElementById('currentSize').textContent = sizeMB + ' MB';
+            updateOriginalValueHints();
+            estimateFileSize();
+        }
+
+        function detectSourceCodecChoice() {
+            const sourceCodecRaw = String(videoMetadata?.codec || '').toLowerCase();
+            return (sourceCodecRaw.includes('hevc') || sourceCodecRaw.includes('h265')) ? 'h265' : 'h264';
+        }
+
+        function applySourceCodecDefault() {
+            if (!videoMetadata) return;
+            settings.codec = detectSourceCodecChoice();
+            setActive('#codecSection', settings.codec);
+        }
+
+        function updateOriginalValueHints() {
+            if (!videoMetadata) return;
+
+            document.getElementById('origResolutionValue').textContent = `${videoMetadata.height}p`;
+            document.getElementById('origFpsValue').textContent = `${videoMetadata.fps} FPS`;
+            document.getElementById('origContainerValue').textContent = `${(videoMetadata.container || 'mp4').toUpperCase()}`;
+
+            const sourceCodecRaw = String(videoMetadata.codec || '').toLowerCase();
+            const sourceCodec = (sourceCodecRaw.includes('hevc') || sourceCodecRaw.includes('h265')) ? 'h265' : 'h264';
+
+            document.getElementById('origCodecH264').textContent = sourceCodec === 'h264' ? 'Original' : '';
+            document.getElementById('origCodecH265').textContent = sourceCodec === 'h265' ? 'Original' : '';
+        }
+
+        function resetOriginalValueHints() {
+            document.getElementById('origResolutionValue').textContent = '-';
+            document.getElementById('origFpsValue').textContent = '-';
+            document.getElementById('origContainerValue').textContent = '-';
+            document.getElementById('origCodecH264').textContent = '';
+            document.getElementById('origCodecH265').textContent = '';
+        }
+
+        function enableOptions() {
+            // Enable/disable resolution buttons
+            const resButtons = document.querySelectorAll('#resolutionSection .option-btn');
+            resButtons.forEach(btn => {
+                const value = btn.dataset.value;
+                if (value !== 'original') {
+                    const targetHeight = parseInt(value);
+                    if (targetHeight >= videoMetadata.height) {
+                        btn.disabled = true;
+                    }
+                }
+            });
+
+            // Enable/disable FPS buttons
+            const fpsButtons = document.querySelectorAll('#fpsSection .option-btn');
+            fpsButtons.forEach(btn => {
+                const value = btn.dataset.value;
+                if (value !== 'original') {
+                    const targetFps = parseInt(value);
+                    if (targetFps >= videoMetadata.fps) {
+                        btn.disabled = true;
+                    }
+                }
+            });
+        }
+
+        function selectCodec(codec) {
+            settings.codec = codec;
+            setActive('#codecSection', codec);
+            estimateFileSize();
+            updateDisplay();
+        }
+
+        function selectResolution(res) {
+            settings.resolution = res;
+            setActive('#resolutionSection', res);
+            estimateFileSize();
+            updateDisplay();
+        }
+
+        function selectFps(fps) {
+            settings.fps = fps;
+            setActive('#fpsSection', fps);
+            estimateFileSize();
+            updateDisplay();
+        }
+
+        function selectContainer(container) {
+            settings.container = container;
+            setActive('#containerSection', container);
+            updateDisplay();
+        }
+
+        function setActive(selector, value) {
+            const buttons = document.querySelectorAll(selector + ' .option-btn');
+            buttons.forEach(btn => {
+                if (btn.dataset.value === value) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        function estimateFileSize() {
+            if (!videoMetadata) return;
+
+            const originalSizeBytes = Number(videoMetadata.size || 0);
+            const originalBitrate = Number(videoMetadata.bitrate || 0);
+            const duration = Number(videoMetadata.duration || 0);
+            const originalHeight = Number(videoMetadata.height || 0);
+            const originalFps = Number(videoMetadata.fps || 0);
+            const sourceCodecRaw = String(videoMetadata.codec || '').toLowerCase();
+
+            // Fallback bitrate from source size if ffprobe bitrate is missing.
+            const sourceBitrate = originalBitrate > 0 && duration > 0
+                ? originalBitrate
+                : (duration > 0 ? (originalSizeBytes * 8) / duration : 0);
+
+            // Resolution factor: bitrate tracks roughly with pixel area.
+            let resolutionFactor = 1.0;
+            if (settings.resolution !== 'original' && originalHeight > 0) {
+                const targetHeight = parseInt(settings.resolution, 10);
+                resolutionFactor = Math.pow(targetHeight / originalHeight, 2);
+            }
+
+            // FPS factor: bitrate scales approximately linearly with frame rate.
+            let fpsFactor = 1.0;
+            if (settings.fps !== 'original' && originalFps > 0) {
+                const targetFps = parseInt(settings.fps, 10);
+                fpsFactor = targetFps / originalFps;
+            }
+
+            // Normalize source codec naming to a small set for cross-codec estimation.
+            let sourceCodec = 'h264';
+            if (sourceCodecRaw.includes('hevc') || sourceCodecRaw.includes('h265')) {
+                sourceCodec = 'h265';
+            } else if (sourceCodecRaw.includes('av1')) {
+                sourceCodec = 'av1';
+            } else if (sourceCodecRaw.includes('vp9')) {
+                sourceCodec = 'vp9';
+            }
+
+            // Source-based codec factor: conservative so we don't overestimate as much.
+            const codecFactorMap = {
+                h264: { h264: 0.45, h265: 0.30 },
+                h265: { h264: 0.65, h265: 0.40 },
+                av1: { h264: 0.75, h265: 0.52 },
+                vp9: { h264: 0.58, h265: 0.40 },
+            };
+            const codecFactors = codecFactorMap[sourceCodec] || codecFactorMap.h264;
+            const codecFactor = codecFactors[settings.codec] || 0.40;
+
+            // Quality profile factor derived from backend CRF/CQ deltas.
+            // Rule of thumb: ~6 CRF difference ~= 2x bitrate.
+            const qualityCrfByCodec = {
+                h264: {
+                    less_space: 28,
+                    less_space_plus: 26,
+                    balanced: 23,
+                    balanced_plus: 21,
+                    better_quality: 18,
+                },
+                h265: {
+                    less_space: 28,
+                    less_space_plus: 26,
+                    balanced: 23,
+                    balanced_plus: 21,
+                    better_quality: 18,
+                },
+            };
+            const qualityProfile = qualityCrfByCodec[settings.codec] || qualityCrfByCodec.h264;
+            const selectedCrf = qualityProfile[settings.quality] || qualityProfile.balanced;
+            const balancedCrf = qualityProfile.balanced;
+            const qualityFactor = Math.pow(2, (balancedCrf - selectedCrf) / 6);
+
+            // Preset factor to reflect backend encoder effort changes per quality level.
+            const qualityPresetFactor = {
+                less_space: 0.90,      // veryfast
+                less_space_plus: 0.95, // faster
+                balanced: 1.00,        // medium
+                balanced_plus: 1.03,   // medium + lower CRF
+                better_quality: 1.12,  // slow
+            };
+            const presetFactor = qualityPresetFactor[settings.quality] || 1.00;
+
+            // Hardware can change rate-control behavior slightly; small effect only.
+            const hardwareFactor = settings.useHardware ? 1.02 : 1.00;
+
+            // Simple motion/detail compensation to reduce underestimation on high-FPS clips.
+            const complexityFactor = Math.max(0.85, Math.min(1.25, Math.pow(fpsFactor, 0.3)));
+
+            const sourceModelBitrate = sourceBitrate
+                * resolutionFactor
+                * fpsFactor
+                * codecFactor
+                * qualityFactor
+                * presetFactor
+                * hardwareFactor
+                * complexityFactor;
+
+            // Pixel-rate model (bits-per-pixel-per-frame), then blended conservatively.
+            const originalWidth = Number(videoMetadata.width || 0);
+            let targetWidth = originalWidth;
+            let targetHeight = originalHeight;
+            if (settings.resolution !== 'original' && originalWidth > 0 && originalHeight > 0) {
+                const targetRes = parseInt(settings.resolution, 10);
+                const isPortrait = originalWidth < originalHeight;
+                if (isPortrait) {
+                    targetWidth = targetRes;
+                    targetHeight = Math.max(1, Math.round((originalHeight / originalWidth) * targetRes));
+                } else {
+                    targetHeight = targetRes;
+                    targetWidth = Math.max(1, Math.round((originalWidth / originalHeight) * targetRes));
+                }
+            }
+            const targetFps = settings.fps !== 'original' && originalFps > 0
+                ? parseInt(settings.fps, 10)
+                : Math.max(1, originalFps || 30);
+            const targetPixelRate = Math.max(1, targetWidth) * Math.max(1, targetHeight) * Math.max(1, targetFps);
+
+            const bppByCodec = {
+                h264: {
+                    less_space: 0.010,
+                    less_space_plus: 0.016,
+                    balanced: 0.024,
+                    balanced_plus: 0.034,
+                    better_quality: 0.050,
+                },
+                h265: {
+                    less_space: 0.007,
+                    less_space_plus: 0.011,
+                    balanced: 0.017,
+                    balanced_plus: 0.025,
+                    better_quality: 0.038,
+                },
+            };
+            const bppTable = bppByCodec[settings.codec] || bppByCodec.h264;
+            const targetBpp = bppTable[settings.quality] || bppTable.balanced;
+            const pixelModelBitrate = targetPixelRate * targetBpp;
+
+            // Pick the lower of source-derived and pixel-derived models to avoid large overestimates.
+            let estimatedBitrate = Math.min(sourceModelBitrate, pixelModelBitrate * 1.2);
+
+            // Keep estimate within sensible bounds to avoid extreme swings.
+            const minBitrate = 150_000; // 150 kbps floor
+            const maxBitrate = sourceBitrate > 0 ? sourceBitrate * 0.95 : pixelModelBitrate * 1.5;
+            estimatedBitrate = Math.max(minBitrate, Math.min(estimatedBitrate, maxBitrate));
+
+            const estimatedBytes = duration > 0
+                ? (estimatedBitrate / 8) * duration
+                : originalSizeBytes;
+            const estimatedMB = (estimatedBytes / (1024 * 1024)).toFixed(2);
+            
+            document.getElementById('estimatedSize').textContent = estimatedMB + ' MB';
+
+            // Calculate compression percentage
+            const compressionPercent = originalSizeBytes > 0
+                ? Math.max(0, Math.round((1 - estimatedBytes / originalSizeBytes) * 100))
+                : 0;
+            document.getElementById('compression').textContent = compressionPercent + '%';
+        }
+
+        function updateDisplay() {
+            // Resolution
+            if (settings.resolution === 'original') {
+                document.getElementById('displayResolution').textContent = videoMetadata.height + 'p';
+            } else {
+                document.getElementById('displayResolution').textContent = settings.resolution + 'p';
+            }
+
+            // Format
+            let format = settings.container === 'original' 
+                ? (videoMetadata.container || 'MP4').toUpperCase() 
+                : settings.container.toUpperCase();
+            document.getElementById('displayFormat').textContent = format;
+
+            // Encoding
+            let encoding = settings.codec === 'h264' ? 'H.264' : 'H.265';
+            document.getElementById('displayEncoding').textContent = encoding;
+
+            // FPS
+            if (settings.fps === 'original') {
+                document.getElementById('displayFps').textContent = videoMetadata.fps;
+            } else {
+                document.getElementById('displayFps').textContent = settings.fps;
+            }
+        }
+
+        async function convertVideo() {
+            const btn = document.getElementById('convertBtn');
+            btn.disabled = true;
+            backBtn.disabled = true;
+            isConverting = true;
+
+            // 1. Request the screen to stay awake
+            await requestWakeLock();
+
+                btn.innerHTML = '<span class="spinner"></span>Converting...';
+            showStatus('Converting video... this may take a while', true);
+            
+            // Show progress bar immediately at 0%
+            showProgress(0, 'Starting conversion...');
+
+            // Use Server-Sent Events for real-time progress updates
+            let eventSource = null;
+            let progressPollInterval = null;
+            let streamRetryTimer = null;
+            let conversionDone = false;
+            const progressUrl = '/progress/' + fileId;
+            const streamUrl = '/progress/stream/' + fileId;
+
+            const cleanupProgressWatchers = () => {
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+                if (progressPollInterval) {
+                    clearInterval(progressPollInterval);
+                    progressPollInterval = null;
+                }
+                if (streamRetryTimer) {
+                    clearTimeout(streamRetryTimer);
+                    streamRetryTimer = null;
+                }
+            };
+
+            const handleProgressPayload = (data) => {
+                if (data.percent !== undefined) {
+                    const frame = Number(data.frame || 0);
+                    const totalFrames = Number(data.total_frames || 0);
+                    const speed = (data.speed && data.speed !== '-') ? String(data.speed) : '--';
+
+                    let frameText = 'Frame --';
+                    if (totalFrames > 0) {
+                        frameText = `Frame ${frame}/${totalFrames}`;
+                    } else if (frame > 0) {
+                        frameText = `Frame ${frame}`;
+                    }
+
+                    showProgress(
+                        data.percent,
+                        `Converting: ${speed} | ${frameText} | ${Number(data.percent).toFixed(1)}%`
+                    );
+                }
+
+                if (data.percent >= 100 || data.status === 'complete') {
+                    conversionDone = true;
+                    cleanupProgressWatchers();
+                }
+            };
+
+            const startProgressStream = () => {
+                eventSource = new EventSource(streamUrl);
+                
+                eventSource.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleProgressPayload(data);
+                    } catch (err) {
+                        console.error('Progress stream parsing error:', err);
+                    }
+                };
+                
+                eventSource.onerror = (err) => {
+                    console.error('Progress stream error:', err);
+
+                    // Safari/mobile can intermittently drop SSE; retry while conversion is active.
+                    if (eventSource) {
+                        eventSource.close();
+                        eventSource = null;
+                    }
+
+                    if (!conversionDone) {
+                        if (streamRetryTimer) {
+                            clearTimeout(streamRetryTimer);
+                        }
+                        streamRetryTimer = setTimeout(() => {
+                            if (!conversionDone) {
+                                startProgressStream();
+                            }
+                        }, 1000);
+                    }
+                };
+            };
+
+            const startProgressPolling = () => {
+                progressPollInterval = setInterval(async () => {
+                    if (conversionDone) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(progressUrl, { cache: 'no-store' });
+                        if (!response.ok) {
+                            return;
+                        }
+                        const data = await response.json();
+                        handleProgressPayload(data);
+                    } catch (err) {
+                        console.warn('Progress polling failed:', err);
+                    }
+                }, 1200);
+            };
+
+            // Start streaming progress
+            startProgressStream();
+            startProgressPolling();
+
+            try {
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        fileId: fileId,
+                        codec: settings.codec,
+                        resolution: settings.resolution,
+                        fps: settings.fps,
+                        container: settings.container === 'original' 
+                            ? (videoMetadata.container || 'mp4') 
+                            : settings.container,
+                        quality: settings.quality,
+                        useHardware: settings.useHardware
+                    })
+                });
+
+                conversionDone = true;
+                cleanupProgressWatchers();
+
+                if (!response.ok) throw new Error('Conversion failed');
+
+                const result = await response.json();
+                
+                // Show 100% complete
+                showProgress(100, 'Conversion complete: 100%');
+                
+                // Clear input file ID (already cleaned up by backend)
+                fileId = null;
+                
+                // Store filename for download/share
+                outputFileId = result.filename;
+                convertedFilename = result.filename;
+
+                
+                // Pre-fetch the file blob for instant sharing (iOS requirement)
+                // This keeps the file in memory so share doesn't need async fetch
+                try {
+                    console.log('Pre-fetching converted file for sharing...');
+                    const fileResponse = await fetch('/download/' + convertedFilename);
+                    if (fileResponse.ok) {
+                        convertedFileBlob = await fileResponse.blob();
+                        console.log('File pre-fetched for sharing:', convertedFileBlob.size, 'bytes');
+                    }
+                } catch (err) {
+                    console.warn('Failed to pre-fetch file:', err);
+                    convertedFileBlob = null;
+                }
+                
+                // Hide progress
+                setTimeout(() => {
+                    hideProgress();
+                }, 500);
+                
+                // Show download/share buttons
+                document.getElementById('convertBtn').style.display = 'none';
+                document.getElementById('downloadButtons').style.display = 'flex';
+                
+                // Detect iPhone/iPad Safari
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                const hasShareAPI = !!navigator.share;
+                
+                console.log('iOS device:', isIOS);
+                console.log('Share API available:', hasShareAPI);
+                console.log('User agent:', navigator.userAgent);
+                
+                // On iOS with Share API: Hide download, show only share
+                // On other devices: Show both buttons
+                if (isIOS && hasShareAPI) {
+                    document.getElementById('downloadBtn').style.display = 'none';
+                    document.getElementById('shareBtn').style.display = 'block';
+                    showStatus('✅ Conversion complete! Tap Share to save to Photos.', false);
+                    console.log('iOS: Showing share button only');
+                } else if (hasShareAPI) {
+                    document.getElementById('downloadBtn').style.display = 'block';
+                    document.getElementById('shareBtn').style.display = 'block';
+                    showStatus('✅ Conversion complete! Choose download or share.', false);
+                    console.log('Desktop with share: Showing both buttons');
+                } else {
+                    document.getElementById('downloadBtn').style.display = 'block';
+                    document.getElementById('shareBtn').style.display = 'none';
+                    showStatus('✅ Conversion complete! Download started.', false);
+                    console.log('No share API: Download only');
+                }
+                btn.innerHTML = 'Convert';
+                btn.disabled = false;
+                backBtn.disabled = false;
+                isConverting = false;
+
+                // 2. Release the lock on success
+                releaseWakeLock();
+            } catch (error) {
+                conversionDone = true;
+                cleanupProgressWatchers();
+                hideProgress();
+                showStatus('❌ Error: ' + error.message, false);
+                btn.innerHTML = 'Convert';
+                btn.disabled = false;
+                backBtn.disabled = false;
+                isConverting = false;
+
+                // 3. Release the lock on error
+                releaseWakeLock();
+            }
+        }
+
+        async function downloadFile() {
+            if (!convertedFilename) {
+                showStatus('❌ Converted file is no longer available. Please convert again.', false);
+                return;
+            }
+            
+            // Start download
+            window.location.href = '/download/' + convertedFilename;
+
+            // Keep converted output available for retry/share.
+            showStatus('📥 Download started. You can still share or download again.', false);
+        }
+
+       async function shareFile() {
+            if (!convertedFilename) return;
+
+            // Hide fallback button initially
+            document.getElementById('skinnyDownloadBtn').style.display = 'none';
+
+            // 1. Check if the browser supports sharing files
+            if (!navigator.canShare) {
+                // Show fallback download button
+                document.getElementById('skinnyDownloadBtn').style.display = 'block';
+                alert("Your browser does not support the Web Share API. Please use the Download button.");
+                return;
+            }
+
+            try {
+                // Show a loading status on the UI
+                showStatus('📤 Preparing file for Photos...', true);
+
+                // 2. USE THE PRE-FETCHED BLOB (Fallback to network if it failed)
+                let blob = convertedFileBlob;
+                if (!blob) {
+                    console.log("Pre-fetched blob missing, fetching from network...");
+                    const response = await fetch(`/download/${convertedFilename}`);
+                    if (!response.ok) throw new Error('Failed to fetch file');
+                    blob = await response.blob();
+                }
+
+                // Determine the correct container to set the right MIME type
+                const container = settings.container === 'original'
+                    ? (videoMetadata.container || 'mp4').toLowerCase()
+                    : settings.container.toLowerCase();
+
+                // 3. Create a File object (crucial for iOS Photos)
+                const mimeType = container === 'mov' ? 'video/quicktime' : 'video/mp4';
+
+                // Strip the hidden unique ID from the filename (everything before the first underscore)
+                const cleanFilename = convertedFilename.substring(convertedFilename.indexOf('_') + 1);
+
+                const file = new File([blob], cleanFilename, { type: mimeType });
+
+                // 4. Check if this specific file type can be shared
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Converted Video'
+                    });
+
+                    showStatus('✅ Saved to Photos successfully!', false);
+                    // Keep converted output available in case user also wants to download it.
+                } else {
+                    showStatus('❌ iOS will not allow sharing this file type.', false);
+                    // Show fallback download button
+                    document.getElementById('skinnyDownloadBtn').style.display = 'block';
+                }
+            } catch (error) {
+                console.error("Error sharing video:", error);
+
+                convertedFileBlob = null;
+
+                if (error.name !== 'AbortError') {
+                    showStatus('❌ Share failed. Please use Download instead.', false);
+                    document.getElementById('skinnyDownloadBtn').style.display = 'block';
+                } else {
+                    hideStatus();
+                }
+            }
+        }
+
+      function resetAfterDownload() {
+            // 1. Tell the server to delete the file from its RAM immediately
+            if (outputFileId) {
+                fetch('/cleanup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ fileIds: [outputFileId] })
+                }).then(response => {
+                    if (response.ok) {
+                        console.log('Server memory cleaned successfully.');
+                    }
+                }).catch(err => {
+                    console.error('Failed to trigger server cleanup:', err);
+                });
+            }
+
+            // 2. Reset UI state and clear frontend memory
+            outputFileId = null;
+            convertedFilename = null;
+            convertedFileBlob = null; // Clear blob from browser memory
+
+            document.getElementById('convertBtn').style.display = 'block';
+            document.getElementById('downloadButtons').style.display = 'none';
+
+            setTimeout(() => {
+                hideStatus();
+            }, 3000);
+        }
+
+        function showStatus(message, loading) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.innerHTML = loading ? '<span class="spinner"></span>' + message : message;
+            statusEl.classList.add('visible');
+        }
+
+        function hideStatus() {
+            document.getElementById('statusMessage').classList.remove('visible');
+        }
+
+        function showProgress(percent, text) {
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            progressContainer.classList.add('visible');
+            progressText.classList.add('visible');
+            progressBar.style.width = percent + '%';
+            progressText.textContent = text;
+        }
+
+        function hideProgress() {
+            document.getElementById('progressContainer').classList.remove('visible');
+            document.getElementById('progressText').classList.remove('visible');
+            document.getElementById('progressBar').style.width = '0%';
+        }
+    </script>
+</body>
+
+</html>

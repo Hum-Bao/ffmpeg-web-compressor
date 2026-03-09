@@ -1,0 +1,7 @@
+# Python dirs
+/__pycache__
+/.venv
+/modules/__pycache__
+
+#Log folder
+/logs

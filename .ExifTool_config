@@ -1,0 +1,10 @@
+%Image::ExifTool::UserDefined = (
+    'Image::ExifTool::QuickTime::Keys' => {
+        # Add Apple's iOS Version tag
+        'com.apple.quicktime.software' => {
+            Name => 'Software',
+            Format => 'string',
+        },
+    },
+);
+1;  # end
