@@ -21,9 +21,11 @@ WIN_RAMDISK_FOLDER_ENV = "FFMPEG_WEB_WINDOWS_RAMDISK_FOLDER"
 _DEFAULT_DRIVE = "R:"
 _DEFAULT_FOLDER = "ffmpeg-temp"
 _DEFAULT_SIZE = "8G"
-_MOUNT_READY_TIMEOUT_SECONDS = 8.0
+_MOUNT_READY_TIMEOUT_SECONDS = 25.0
 _MOUNT_READY_POLL_SECONDS = 0.2
 _WINERR_UNRECOGNIZED_FILESYSTEM = 1005
+_WINERR_DEVICE_NOT_READY = 21
+_WINERR_PATH_NOT_FOUND = 3
 
 
 def _require_ram_storage() -> bool:
@@ -79,21 +81,45 @@ def _detach_imdisk(*, imdisk_bin: str, drive: str) -> None:
     _run_imdisk([imdisk_bin, "-D", "-m", drive])
 
 
-def _wait_for_mount_root(mount_root: Path) -> bool:
-    """Wait briefly for mount root to become available after attachment."""
-    deadline = time.monotonic() + _MOUNT_READY_TIMEOUT_SECONDS
-    while time.monotonic() < deadline:
-        if mount_root.exists():
-            return True
-        time.sleep(_MOUNT_READY_POLL_SECONDS)
-    return mount_root.exists()
-
-
 def _create_workspace_dir(mount_root: Path, folder: str) -> Path:
     """Create and return writable workspace directory on mounted volume."""
     ram_dir = mount_root / folder
     ram_dir.mkdir(parents=True, exist_ok=True)
     return ram_dir
+
+
+def _create_workspace_dir_with_retry(
+    *,
+    mount_root: Path,
+    folder: str,
+    timeout_seconds: float,
+) -> Path:
+    """Create workspace directory, retrying while Windows mount is settling."""
+    deadline = time.monotonic() + timeout_seconds
+    last_exc: OSError | None = None
+
+    while time.monotonic() < deadline:
+        try:
+            return _create_workspace_dir(mount_root, folder)
+        except OSError as exc:
+            winerror = getattr(exc, "winerror", None)
+            if winerror in {
+                _WINERR_UNRECOGNIZED_FILESYSTEM,
+                _WINERR_DEVICE_NOT_READY,
+                _WINERR_PATH_NOT_FOUND,
+            }:
+                last_exc = exc
+                time.sleep(_MOUNT_READY_POLL_SECONDS)
+                continue
+            raise
+
+    msg = (
+        f"Windows RAM disk {mount_root} did not become writable in time "
+        f"({timeout_seconds:.0f}s)."
+    )
+    if last_exc is not None:
+        raise RuntimeError(msg) from last_exc
+    raise RuntimeError(msg)
 
 
 def ensure_windows_ramdisk(logger: logging.Logger) -> None:
@@ -138,18 +164,14 @@ def ensure_windows_ramdisk(logger: logging.Logger) -> None:
         created_mount = True
         logger.info("Created Windows RAM disk at %s (%s)", drive, size)
 
-    if created_mount and not _wait_for_mount_root(mount_root):
-        msg = f"Windows RAM disk {drive} did not become available in time."
-        raise RuntimeError(msg)
-
     try:
-        ram_dir = _create_workspace_dir(mount_root, folder)
-    except OSError as exc:
-        # WinError 1005: filesystem not recognized yet (or format failed).
-        if (
-            created_mount
-            and getattr(exc, "winerror", None) == _WINERR_UNRECOGNIZED_FILESYSTEM
-        ):
+        ram_dir = _create_workspace_dir_with_retry(
+            mount_root=mount_root,
+            folder=folder,
+            timeout_seconds=_MOUNT_READY_TIMEOUT_SECONDS,
+        )
+    except RuntimeError as exc:
+        if created_mount:
             logger.warning(
                 (
                     "RAM disk %s not ready after creation; "
@@ -167,13 +189,18 @@ def ensure_windows_ramdisk(logger: logging.Logger) -> None:
                 )
                 raise RuntimeError(msg) from exc
 
-            if not _wait_for_mount_root(mount_root):
-                msg = f"Windows RAM disk {drive} did not become available after retry."
-                raise RuntimeError(msg) from exc
-
-            ram_dir = _create_workspace_dir(mount_root, folder)
+            ram_dir = _create_workspace_dir_with_retry(
+                mount_root=mount_root,
+                folder=folder,
+                timeout_seconds=_MOUNT_READY_TIMEOUT_SECONDS,
+            )
         else:
-            raise
+            msg = (
+                f"Windows RAM disk {drive} is unavailable. "
+                "Set FFMPEG_WEB_REQUIRE_RAM_STORAGE=0 to allow disk-backed temp "
+                "storage, or set FFMPEG_WEB_RAMDISK_DIR manually."
+            )
+            raise RuntimeError(msg) from exc
 
     os.environ[RAMDISK_ENV_VAR] = str(ram_dir)
     logger.info("Using Windows RAM workspace: %s", ram_dir)
