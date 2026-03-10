@@ -45,6 +45,8 @@ HTTP_INTERNAL_SERVER_ERROR = 500
 
 CONVERSION_TIMEOUT_SECONDS = 7200
 THREAD_JOIN_TIMEOUT_SECONDS = 2
+CONVERSION_WORKING_SET_MULTIPLIER = 2.4
+TEMP_SPACE_HEADROOM_FACTOR = 1.1
 
 
 def _output_mimetype(container: str) -> str:
@@ -245,15 +247,24 @@ def _bytes_to_mb(value: int) -> float:
     return round(value / (1024 * 1024), 2)
 
 
-def _has_enough_temp_space(required_bytes: int) -> tuple[bool, int]:
-    """Check whether temp dir has enough free space for an upload."""
+def _required_temp_working_bytes(upload_bytes: int) -> int:
+    """Estimate RAM-disk space needed for upload plus conversion output."""
+    if upload_bytes <= 0:
+        return 0
+
+    # Input file and output file typically coexist during conversion.
+    return int(upload_bytes * CONVERSION_WORKING_SET_MULTIPLIER)
+
+
+def _has_enough_temp_space(upload_bytes: int) -> tuple[bool, int, int]:
+    """Check whether temp dir has enough free space for upload+conversion."""
+    required_bytes = _required_temp_working_bytes(upload_bytes)
     if required_bytes <= 0:
-        return True, 0
+        return True, 0, 0
 
     free_bytes = shutil.disk_usage(_temp_dir()).free
-    # Keep a small safety margin so conversion output can still be created.
-    needed_with_headroom = int(required_bytes * 1.08)
-    return free_bytes >= needed_with_headroom, free_bytes
+    needed_with_headroom = int(required_bytes * TEMP_SPACE_HEADROOM_FACTOR)
+    return free_bytes >= needed_with_headroom, free_bytes, needed_with_headroom
 
 
 def _safe_delete_path(path: str | None) -> None:
@@ -487,13 +498,16 @@ def analyze() -> tuple[Response, int]:
         client_size_bytes = int(client_size_raw) if client_size_raw.isdigit() else 0
         content_length = int(request.content_length or 0)
         estimated_upload_bytes = max(client_size_bytes, content_length)
-        has_space, free_bytes = _has_enough_temp_space(estimated_upload_bytes)
+        has_space, free_bytes, estimated_needed_bytes = _has_enough_temp_space(
+            estimated_upload_bytes,
+        )
         if not has_space:
             return (
                 jsonify(
                     {
                         "error": ERR_INSUFFICIENT_TEMP_SPACE,
                         "estimated_upload_mb": _bytes_to_mb(estimated_upload_bytes),
+                        "estimated_needed_mb": _bytes_to_mb(estimated_needed_bytes),
                         "free_temp_mb": _bytes_to_mb(free_bytes),
                         "temp_dir": _temp_dir(),
                     },

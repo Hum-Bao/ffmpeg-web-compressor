@@ -8,6 +8,7 @@ import atexit
 import contextlib
 import logging
 import os
+import platform
 import shutil
 import subprocess
 import time
@@ -28,12 +29,28 @@ _ATTACH_RETRIES = 2
 _WINERR_UNRECOGNIZED_FILESYSTEM = 1005
 _WINERR_DEVICE_NOT_READY = 21
 _WINERR_PATH_NOT_FOUND = 3
+_IMDISK_PERMISSION_MARKERS = (
+    "access is denied",
+    "permission denied",
+    "requires elevation",
+    "administrator",
+    "privilege",
+)
 
 _runtime_state: dict[str, bool | str | None] = {
     "created_mount_by_app": False,
     "active_imdisk_bin": None,
     "active_drive": None,
 }
+
+
+def _is_windows_runtime() -> bool:
+    """Return True when running on Windows.
+
+    Kept as a helper so static analyzers do not fold platform checks and mark
+    Windows-specific code paths as structurally unreachable on Linux/macOS.
+    """
+    return platform.system().lower() == "windows"
 
 
 def _require_ram_storage() -> bool:
@@ -84,6 +101,12 @@ def _attach_imdisk(
     return _run_imdisk(cmd)
 
 
+def _imdisk_permission_error(result: subprocess.CompletedProcess[str]) -> bool:
+    """Return True when ImDisk output indicates missing administrator rights."""
+    combined = f"{result.stdout}\n{result.stderr}".lower()
+    return any(marker in combined for marker in _IMDISK_PERMISSION_MARKERS)
+
+
 def _detach_imdisk(*, imdisk_bin: str, drive: str) -> None:
     """Detach a mounted ImDisk volume if present."""
     with contextlib.suppress(
@@ -113,6 +136,15 @@ def _attach_imdisk_with_retry(
         if result.returncode == 0:
             return
 
+        if _imdisk_permission_error(result):
+            msg = (
+                "ImDisk failed due to insufficient privileges while creating "
+                f"RAM disk {drive}. Re-run this app as Administrator on Windows, "
+                "or set FFMPEG_WEB_RAMDISK_DIR manually. "
+                f"stdout={result.stdout.strip()} stderr={result.stderr.strip()}"
+            )
+            raise RuntimeError(msg)
+
         last_result = result
         logger.warning(
             "ImDisk attach attempt %d/%d failed for %s: %s",
@@ -140,6 +172,24 @@ def _create_workspace_dir(mount_root: Path, folder: str) -> Path:
     return ram_dir
 
 
+def _create_workspace_dir_when_ready(
+    mount_root: Path,
+    folder: str,
+) -> tuple[Path | None, OSError | None]:
+    """Attempt workspace creation once and classify transient mount errors."""
+    try:
+        return _create_workspace_dir(mount_root, folder), None
+    except OSError as exc:
+        winerror = getattr(exc, "winerror", None)
+        if winerror in {
+            _WINERR_UNRECOGNIZED_FILESYSTEM,
+            _WINERR_DEVICE_NOT_READY,
+            _WINERR_PATH_NOT_FOUND,
+        }:
+            return None, exc
+        raise
+
+
 def _create_workspace_dir_with_retry(
     *,
     mount_root: Path,
@@ -151,19 +201,15 @@ def _create_workspace_dir_with_retry(
     last_exc: OSError | None = None
 
     while time.monotonic() < deadline:
-        try:
-            return _create_workspace_dir(mount_root, folder)
-        except OSError as exc:
-            winerror = getattr(exc, "winerror", None)
-            if winerror in {
-                _WINERR_UNRECOGNIZED_FILESYSTEM,
-                _WINERR_DEVICE_NOT_READY,
-                _WINERR_PATH_NOT_FOUND,
-            }:
-                last_exc = exc
-                time.sleep(_MOUNT_READY_POLL_SECONDS)
-                continue
-            raise
+        workspace_dir, transient_exc = _create_workspace_dir_when_ready(
+            mount_root,
+            folder,
+        )
+        if workspace_dir is not None:
+            return workspace_dir
+
+        last_exc = transient_exc
+        time.sleep(_MOUNT_READY_POLL_SECONDS)
 
     msg = (
         f"Windows RAM disk {mount_root} did not become writable in time "
@@ -176,7 +222,7 @@ def _create_workspace_dir_with_retry(
 
 def ensure_windows_ramdisk(logger: logging.Logger) -> None:
     """Ensure FFMPEG_WEB_RAMDISK_DIR points to a valid Windows RAM-disk folder."""
-    if os.name != "nt":
+    if not _is_windows_runtime():
         return
 
     existing = os.environ.get(RAMDISK_ENV_VAR, "").strip()
@@ -275,7 +321,7 @@ def ensure_windows_ramdisk(logger: logging.Logger) -> None:
 
 def cleanup_windows_ramdisk(logger: logging.Logger | None = None) -> bool:
     """Detach app-created Windows RAM disk immediately when present."""
-    if os.name != "nt":
+    if not _is_windows_runtime():
         return False
 
     created_mount_by_app = bool(_runtime_state.get("created_mount_by_app"))
