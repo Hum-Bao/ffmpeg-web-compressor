@@ -55,6 +55,13 @@ QUALITY_MAP = {
         "nvenc_cq": "28",
         "qsv_q": "28",
         "preset": "veryfast",
+        "x265_frame_threads": "4",
+        "x265_pools": "8",
+        "x265_pmode": "1",
+        "x265_pme": "1",
+        "x265_rc_lookahead": "32",
+        "x265_ref": "3",
+        "x265_bframes": "6",
     },
     "less_space_plus": {
         "h264_crf": "26",
@@ -62,6 +69,13 @@ QUALITY_MAP = {
         "nvenc_cq": "26",
         "qsv_q": "26",
         "preset": "faster",
+        "x265_frame_threads": "4",
+        "x265_pools": "8",
+        "x265_pmode": "1",
+        "x265_pme": "1",
+        "x265_rc_lookahead": "36",
+        "x265_ref": "4",
+        "x265_bframes": "7",
     },
     "balanced": {
         "h264_crf": "23",
@@ -69,6 +83,13 @@ QUALITY_MAP = {
         "nvenc_cq": "23",
         "qsv_q": "23",
         "preset": "medium",
+        "x265_frame_threads": "3",
+        "x265_pools": "6",
+        "x265_pmode": "1",
+        "x265_pme": "1",
+        "x265_rc_lookahead": "40",
+        "x265_ref": "4",
+        "x265_bframes": "8",
     },
     "balanced_plus": {
         "h264_crf": "21",
@@ -76,6 +97,13 @@ QUALITY_MAP = {
         "nvenc_cq": "21",
         "qsv_q": "21",
         "preset": "medium",
+        "x265_frame_threads": "3",
+        "x265_pools": "6",
+        "x265_pmode": "1",
+        "x265_pme": "1",
+        "x265_rc_lookahead": "44",
+        "x265_ref": "5",
+        "x265_bframes": "8",
     },
     "better_quality": {
         "h264_crf": "19",
@@ -83,18 +111,17 @@ QUALITY_MAP = {
         "nvenc_cq": "19",
         "qsv_q": "19",
         "preset": "slow",
+        "x265_frame_threads": "2",
+        "x265_pools": "4",
+        "x265_pmode": "1",
+        "x265_pme": "1",
+        "x265_rc_lookahead": "48",
+        "x265_ref": "5",
+        "x265_bframes": "8",
     },
 }
 
 METADATA_ARGS = [
-    # "-map_metadata",
-    # "0",
-    # "-map_metadata:s:v",
-    # "0:s:v",
-    # "-map_metadata:s:a",
-    # "0:s:a",
-    # "-movflags",
-    # "use_metadata_tags",
     "-write_tmcd",
     "1",
 ]
@@ -383,6 +410,29 @@ def _is_hevc_encoder(encoder: str, target_codec: str) -> bool:
     return _is_h265_codec(target_codec) or "hevc" in encoder
 
 
+def _build_x265_params(
+    quality_settings: dict[str, str],
+    usable_cores: str,
+) -> str:
+    """Build x265 param string from quality preset tuning values."""
+    cores = max(int(usable_cores), 1)
+    pools = min(int(quality_settings.get("x265_pools", usable_cores)), cores)
+
+    params = [
+        "asm=auto",
+        f"frame-threads={quality_settings.get('x265_frame_threads', '3')}",
+        f"pools={pools}",
+        f"pmode={quality_settings.get('x265_pmode', '1')}",
+        f"pme={quality_settings.get('x265_pme', '1')}",
+        f"rc-lookahead={quality_settings.get('x265_rc_lookahead', '40')}",
+        f"ref={quality_settings.get('x265_ref', '4')}",
+        f"bframes={quality_settings.get('x265_bframes', '8')}",
+        "wpp=1",
+        "lookahead-slices=0",
+    ]
+    return ":".join(params)
+
+
 def _add_encoder_quality_args(
     cmd: list[str],
     selected_codec: str,
@@ -416,13 +466,12 @@ def _add_encoder_quality_args(
 
     cmd.extend(["-preset", quality_settings.get("preset", "faster")])
     if _is_hevc_encoder(selected_codec, target_codec):
-        x265_params = ["asm=auto", f"pools={usable_cores}", "lookahead-slices=0"]
         cmd.extend(
             [
                 "-crf",
                 quality_settings["h265_crf"],
                 "-x265-params",
-                ":".join(x265_params),
+                _build_x265_params(quality_settings, usable_cores),
             ],
         )
     else:
