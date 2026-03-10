@@ -111,13 +111,13 @@ QUALITY_MAP = {
         "nvenc_cq": "19",
         "qsv_q": "19",
         "preset": "slow",
-        "x265_frame_threads": "2",
-        "x265_pools": "4",
+        "x265_frame_threads": "4",
+        "x265_pools": "8",
         "x265_pmode": "1",
         "x265_pme": "1",
-        "x265_rc_lookahead": "48",
-        "x265_ref": "5",
-        "x265_bframes": "8",
+        "x265_rc_lookahead": "36",
+        "x265_ref": "4",
+        "x265_bframes": "6",
     },
 }
 
