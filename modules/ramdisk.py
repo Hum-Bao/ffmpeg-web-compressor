@@ -6,13 +6,16 @@ then exposes a writable subdirectory for this app's temp workspace.
 
 import atexit
 import contextlib
+import ctypes
 import logging
 import os
 import platform
 import shutil
 import subprocess
 import time
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, cast
 
 RAMDISK_ENV_VAR = "FFMPEG_WEB_RAMDISK_DIR"
 REQUIRE_RAM_ENV_VAR = "FFMPEG_WEB_REQUIRE_RAM_STORAGE"
@@ -44,6 +47,15 @@ _runtime_state: dict[str, bool | str | None] = {
 }
 
 
+@dataclass(frozen=True)
+class _RamdiskMountSpec:
+    drive: str
+    size: str
+    folder: str
+    mount_root: Path
+    imdisk_bin: str
+
+
 def _is_windows_runtime() -> bool:
     """Return True when running on Windows.
 
@@ -51,6 +63,90 @@ def _is_windows_runtime() -> bool:
     Windows-specific code paths as structurally unreachable on Linux/macOS.
     """
     return platform.system().lower() == "windows"
+
+
+def _is_windows_admin() -> bool:
+    """Best-effort check for Windows administrator privileges."""
+    if not _is_windows_runtime():
+        return False
+
+    with contextlib.suppress(AttributeError, OSError, ValueError):
+        windll = cast("Any", getattr(ctypes, "windll", None))
+        if windll is None:
+            return False
+        shell32 = cast("Any", getattr(windll, "shell32", None))
+        if shell32 is None:
+            return False
+        return bool(shell32.IsUserAnAdmin())
+    return False
+
+
+def _resolve_windows_ramdisk_target() -> tuple[str, str, str, Path]:
+    """Read RAM-disk target settings from environment."""
+    drive = _normalize_drive(os.environ.get(WIN_RAMDISK_DRIVE_ENV, _DEFAULT_DRIVE))
+    size = os.environ.get(WIN_RAMDISK_SIZE_ENV, _DEFAULT_SIZE).strip() or _DEFAULT_SIZE
+    folder = (
+        os.environ.get(WIN_RAMDISK_FOLDER_ENV, _DEFAULT_FOLDER).strip()
+        or _DEFAULT_FOLDER
+    )
+    mount_root = Path(f"{drive}\\")
+    return drive, size, folder, mount_root
+
+
+def _ensure_admin_for_new_windows_ramdisk_mount(mount_root: Path) -> None:
+    """Fail fast when creating a new Windows RAM-disk requires elevation."""
+    if mount_root.exists() or _is_windows_admin():
+        return
+
+    msg = (
+        "Windows RAM disk creation requires Administrator privileges. "
+        "Re-run this app as Administrator, set "
+        "FFMPEG_WEB_REQUIRE_RAM_STORAGE=0 to allow disk-backed temp storage, "
+        "or set FFMPEG_WEB_RAMDISK_DIR manually."
+    )
+    raise RuntimeError(msg)
+
+
+def _recover_or_raise_on_mount_ready_failure(
+    *,
+    logger: logging.Logger,
+    spec: _RamdiskMountSpec,
+    created_mount: bool,
+    cause: RuntimeError,
+) -> Path:
+    """Recover once from a fresh mount that did not become writable in time."""
+    if not created_mount:
+        msg = (
+            f"Windows RAM disk {spec.drive} is unavailable. "
+            "Set FFMPEG_WEB_REQUIRE_RAM_STORAGE=0 to allow disk-backed temp "
+            "storage, or set FFMPEG_WEB_RAMDISK_DIR manually."
+        )
+        raise RuntimeError(msg) from cause
+
+    logger.warning(
+        "RAM disk %s not ready after creation; reattaching and formatting once.",
+        spec.drive,
+    )
+    _detach_imdisk(imdisk_bin=spec.imdisk_bin, drive=spec.drive)
+    result = _attach_imdisk(
+        imdisk_bin=spec.imdisk_bin,
+        drive=spec.drive,
+        size=spec.size,
+    )
+    if result.returncode != 0:
+        _detach_imdisk(imdisk_bin=spec.imdisk_bin, drive=spec.drive)
+        msg = (
+            "Failed to reinitialize Windows RAM disk at "
+            f"{spec.drive} (size {spec.size}). "
+            f"stdout={result.stdout.strip()} stderr={result.stderr.strip()}"
+        )
+        raise RuntimeError(msg) from cause
+
+    return _create_workspace_dir_with_retry(
+        mount_root=spec.mount_root,
+        folder=spec.folder,
+        timeout_seconds=_MOUNT_READY_TIMEOUT_SECONDS,
+    )
 
 
 def _require_ram_storage() -> bool:
@@ -232,6 +328,9 @@ def ensure_windows_ramdisk(logger: logging.Logger) -> None:
     if not _require_ram_storage():
         return
 
+    drive, size, folder, mount_root = _resolve_windows_ramdisk_target()
+    _ensure_admin_for_new_windows_ramdisk_mount(mount_root)
+
     imdisk_bin = shutil.which("imdisk")
     if not imdisk_bin:
         msg = (
@@ -239,16 +338,14 @@ def ensure_windows_ramdisk(logger: logging.Logger) -> None:
             "Install ImDisk Toolkit or set FFMPEG_WEB_RAMDISK_DIR manually."
         )
         raise RuntimeError(msg)
-
-    drive = _normalize_drive(os.environ.get(WIN_RAMDISK_DRIVE_ENV, _DEFAULT_DRIVE))
-    size = os.environ.get(WIN_RAMDISK_SIZE_ENV, _DEFAULT_SIZE).strip() or _DEFAULT_SIZE
-    folder = (
-        os.environ.get(WIN_RAMDISK_FOLDER_ENV, _DEFAULT_FOLDER).strip()
-        or _DEFAULT_FOLDER
-    )
-
-    mount_root = Path(f"{drive}\\")
     created_mount = False
+    spec = _RamdiskMountSpec(
+        drive=drive,
+        size=size,
+        folder=folder,
+        mount_root=mount_root,
+        imdisk_bin=imdisk_bin,
+    )
 
     if not mount_root.exists():
         _attach_imdisk_with_retry(
@@ -262,7 +359,6 @@ def ensure_windows_ramdisk(logger: logging.Logger) -> None:
         _runtime_state["created_mount_by_app"] = True
         _runtime_state["active_imdisk_bin"] = imdisk_bin
         _runtime_state["active_drive"] = drive
-        logger.info("Created Windows RAM disk at %s (%s)", drive, size)
 
     try:
         ram_dir = _create_workspace_dir_with_retry(
@@ -271,39 +367,16 @@ def ensure_windows_ramdisk(logger: logging.Logger) -> None:
             timeout_seconds=_MOUNT_READY_TIMEOUT_SECONDS,
         )
     except RuntimeError as exc:
-        if created_mount:
-            logger.warning(
-                (
-                    "RAM disk %s not ready after creation; "
-                    "reattaching and formatting once."
-                ),
-                drive,
-            )
-            _detach_imdisk(imdisk_bin=imdisk_bin, drive=drive)
-            result = _attach_imdisk(imdisk_bin=imdisk_bin, drive=drive, size=size)
-            if result.returncode != 0:
-                _detach_imdisk(imdisk_bin=imdisk_bin, drive=drive)
-                msg = (
-                    "Failed to reinitialize Windows RAM disk at "
-                    f"{drive} (size {size}). "
-                    f"stdout={result.stdout.strip()} stderr={result.stderr.strip()}"
-                )
-                raise RuntimeError(msg) from exc
-
-            ram_dir = _create_workspace_dir_with_retry(
-                mount_root=mount_root,
-                folder=folder,
-                timeout_seconds=_MOUNT_READY_TIMEOUT_SECONDS,
-            )
-        else:
-            msg = (
-                f"Windows RAM disk {drive} is unavailable. "
-                "Set FFMPEG_WEB_REQUIRE_RAM_STORAGE=0 to allow disk-backed temp "
-                "storage, or set FFMPEG_WEB_RAMDISK_DIR manually."
-            )
-            raise RuntimeError(msg) from exc
+        ram_dir = _recover_or_raise_on_mount_ready_failure(
+            logger=logger,
+            spec=spec,
+            created_mount=created_mount,
+            cause=exc,
+        )
 
     os.environ[RAMDISK_ENV_VAR] = str(ram_dir)
+    if created_mount:
+        logger.info("Created Windows RAM disk at %s (%s)", drive, size)
     logger.info("Using Windows RAM workspace: %s", ram_dir)
 
     # Track values for explicit shutdown cleanup.
