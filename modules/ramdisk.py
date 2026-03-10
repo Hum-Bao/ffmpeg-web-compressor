@@ -5,6 +5,7 @@ then exposes a writable subdirectory for this app's temp workspace.
 """
 
 import atexit
+import contextlib
 import logging
 import os
 import shutil
@@ -85,7 +86,13 @@ def _attach_imdisk(
 
 def _detach_imdisk(*, imdisk_bin: str, drive: str) -> None:
     """Detach a mounted ImDisk volume if present."""
-    _run_imdisk([imdisk_bin, "-D", "-m", drive])
+    with contextlib.suppress(
+        KeyboardInterrupt,
+        OSError,
+        subprocess.SubprocessError,
+        subprocess.TimeoutExpired,
+    ):
+        _run_imdisk([imdisk_bin, "-D", "-m", drive])
 
 
 def _attach_imdisk_with_retry(
