@@ -34,6 +34,7 @@ OUTPUT_MUXER_BY_CONTAINER = {
 }
 
 MAX_FFMPEG_THREADS = 8
+GPU_MAX_QUANTIZER = 51
 
 IOS_HEVC_TAG_CONTAINERS = {"mp4", "m4v", "mov"}
 AUDIO_COMPAT_ARGS_BY_CONTAINER = {
@@ -54,14 +55,15 @@ QUALITY_MAP = {
         "h265_crf": "28",
         "nvenc_cq": "28",
         "qsv_q": "28",
-        "nvenc_preset": "p5",
+        "nvenc_preset": "p6",
         "nvenc_rc_lookahead": "20",
         "nvenc_aq_strength": "4",
         "nvenc_temporal_aq": "0",
         "nvenc_bframes": "3",
         "nvenc_refs": "4",
-        "qsv_preset": "faster",
+        "qsv_preset": "slow",
         "qsv_look_ahead_depth": "20",
+        "gpu_q_step": "1",
         "preset": "veryfast",
         "x265_frame_threads": "4",
         "x265_pools": "8",
@@ -76,14 +78,15 @@ QUALITY_MAP = {
         "h265_crf": "26",
         "nvenc_cq": "26",
         "qsv_q": "26",
-        "nvenc_preset": "p5",
+        "nvenc_preset": "p6",
         "nvenc_rc_lookahead": "24",
         "nvenc_aq_strength": "5",
         "nvenc_temporal_aq": "0",
         "nvenc_bframes": "3",
         "nvenc_refs": "4",
-        "qsv_preset": "faster",
+        "qsv_preset": "slow",
         "qsv_look_ahead_depth": "24",
+        "gpu_q_step": "1",
         "preset": "faster",
         "x265_frame_threads": "4",
         "x265_pools": "8",
@@ -98,14 +101,15 @@ QUALITY_MAP = {
         "h265_crf": "23",
         "nvenc_cq": "23",
         "qsv_q": "23",
-        "nvenc_preset": "p6",
+        "nvenc_preset": "p7",
         "nvenc_rc_lookahead": "28",
         "nvenc_aq_strength": "6",
         "nvenc_temporal_aq": "0",
         "nvenc_bframes": "3",
         "nvenc_refs": "4",
-        "qsv_preset": "medium",
+        "qsv_preset": "slower",
         "qsv_look_ahead_depth": "30",
+        "gpu_q_step": "1",
         "preset": "medium",
         "x265_frame_threads": "3",
         "x265_pools": "6",
@@ -120,14 +124,15 @@ QUALITY_MAP = {
         "h265_crf": "21",
         "nvenc_cq": "21",
         "qsv_q": "21",
-        "nvenc_preset": "p6",
+        "nvenc_preset": "p7",
         "nvenc_rc_lookahead": "32",
         "nvenc_aq_strength": "7",
         "nvenc_temporal_aq": "0",
         "nvenc_bframes": "3",
         "nvenc_refs": "4",
-        "qsv_preset": "medium",
+        "qsv_preset": "slower",
         "qsv_look_ahead_depth": "36",
+        "gpu_q_step": "1",
         "preset": "medium",
         "x265_frame_threads": "3",
         "x265_pools": "6",
@@ -148,8 +153,9 @@ QUALITY_MAP = {
         "nvenc_temporal_aq": "0",
         "nvenc_bframes": "3",
         "nvenc_refs": "4",
-        "qsv_preset": "slow",
+        "qsv_preset": "veryslow",
         "qsv_look_ahead_depth": "40",
+        "gpu_q_step": "0",
         "preset": "slow",
         "x265_frame_threads": "4",
         "x265_pools": "8",
@@ -481,8 +487,20 @@ def _add_encoder_quality_args(
     usable_cores: str,
 ) -> None:
     """Append encoder-specific quality/performance tuning arguments."""
+    gpu_q_step_raw = quality_settings.get("gpu_q_step", "0")
+    try:
+        gpu_q_step = max(int(gpu_q_step_raw), 0)
+    except ValueError:
+        gpu_q_step = 0
+
     if _is_hw_encoder(selected_codec):
         if "nvenc" in selected_codec:
+            nvenc_cq_raw = quality_settings.get("nvenc_cq", "23")
+            try:
+                nvenc_cq = min(int(nvenc_cq_raw) + gpu_q_step, GPU_MAX_QUANTIZER)
+            except ValueError:
+                nvenc_cq = 23
+
             cmd.extend(
                 [
                     "-preset",
@@ -490,7 +508,7 @@ def _add_encoder_quality_args(
                     "-rc",
                     "vbr",
                     "-cq",
-                    quality_settings.get("nvenc_cq", "23"),
+                    str(nvenc_cq),
                     "-b:v",
                     "0",
                     "-spatial_aq",
@@ -508,12 +526,18 @@ def _add_encoder_quality_args(
                 ],
             )
         elif "qsv" in selected_codec:
+            qsv_q_raw = quality_settings.get("qsv_q", "23")
+            try:
+                qsv_q = min(int(qsv_q_raw) + gpu_q_step, GPU_MAX_QUANTIZER)
+            except ValueError:
+                qsv_q = 23
+
             cmd.extend(
                 [
                     "-preset",
                     quality_settings.get("qsv_preset", "medium"),
                     "-global_quality",
-                    quality_settings.get("qsv_q", "23"),
+                    str(qsv_q),
                     "-look_ahead",
                     "1",
                     "-look_ahead_depth",
