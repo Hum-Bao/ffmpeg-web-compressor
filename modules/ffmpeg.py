@@ -445,11 +445,19 @@ def _is_hw_encoder(encoder: str) -> bool:
 
 
 def _is_h264_codec(codec: str) -> bool:
-    return "264" in codec or "h264" in codec
+    return "264" in codec
 
 
 def _is_h265_codec(codec: str) -> bool:
     return "265" in codec or "hevc" in codec
+
+
+def _is_nvenc_encoder(encoder: str) -> bool:
+    return "nvenc" in encoder
+
+
+def _is_qsv_encoder(encoder: str) -> bool:
+    return "qsv" in encoder
 
 
 def _is_hevc_encoder(encoder: str, target_codec: str) -> bool:
@@ -479,73 +487,79 @@ def _build_x265_params(
     return ":".join(params)
 
 
-def _add_encoder_quality_args(
+def _parse_non_negative_int(raw_value: str, default: int = 0) -> int:
+    try:
+        return max(int(raw_value), 0)
+    except ValueError:
+        return default
+
+
+def _clamp_quantizer(base_value: str, q_step: int, default: int = 23) -> int:
+    try:
+        return min(int(base_value) + q_step, GPU_MAX_QUANTIZER)
+    except ValueError:
+        return default
+
+
+def _add_nvenc_quality_args(
+    cmd: list[str],
+    quality_settings: dict[str, str],
+    gpu_q_step: int,
+) -> None:
+    nvenc_cq = _clamp_quantizer(quality_settings.get("nvenc_cq", "23"), gpu_q_step)
+    cmd.extend(
+        [
+            "-preset",
+            quality_settings.get("nvenc_preset", "p6"),
+            "-rc",
+            "vbr",
+            "-cq",
+            str(nvenc_cq),
+            "-b:v",
+            "0",
+            "-spatial_aq",
+            "1",
+            "-temporal_aq",
+            quality_settings.get("nvenc_temporal_aq", "0"),
+            "-aq-strength",
+            quality_settings.get("nvenc_aq_strength", "8"),
+            "-rc-lookahead",
+            quality_settings.get("nvenc_rc_lookahead", "28"),
+            "-bf",
+            quality_settings.get("nvenc_bframes", "3"),
+            "-refs",
+            quality_settings.get("nvenc_refs", "4"),
+        ],
+    )
+
+
+def _add_qsv_quality_args(
+    cmd: list[str],
+    quality_settings: dict[str, str],
+    gpu_q_step: int,
+) -> None:
+    qsv_q = _clamp_quantizer(quality_settings.get("qsv_q", "23"), gpu_q_step)
+    cmd.extend(
+        [
+            "-preset",
+            quality_settings.get("qsv_preset", "medium"),
+            "-global_quality",
+            str(qsv_q),
+            "-look_ahead",
+            "1",
+            "-look_ahead_depth",
+            quality_settings.get("qsv_look_ahead_depth", "30"),
+        ],
+    )
+
+
+def _add_software_quality_args(
     cmd: list[str],
     selected_codec: str,
-    quality_settings: dict[str, str],
     target_codec: str,
+    quality_settings: dict[str, str],
     usable_cores: str,
 ) -> None:
-    """Append encoder-specific quality/performance tuning arguments."""
-    gpu_q_step_raw = quality_settings.get("gpu_q_step", "0")
-    try:
-        gpu_q_step = max(int(gpu_q_step_raw), 0)
-    except ValueError:
-        gpu_q_step = 0
-
-    if _is_hw_encoder(selected_codec):
-        if "nvenc" in selected_codec:
-            nvenc_cq_raw = quality_settings.get("nvenc_cq", "23")
-            try:
-                nvenc_cq = min(int(nvenc_cq_raw) + gpu_q_step, GPU_MAX_QUANTIZER)
-            except ValueError:
-                nvenc_cq = 23
-
-            cmd.extend(
-                [
-                    "-preset",
-                    quality_settings.get("nvenc_preset", "p6"),
-                    "-rc",
-                    "vbr",
-                    "-cq",
-                    str(nvenc_cq),
-                    "-b:v",
-                    "0",
-                    "-spatial_aq",
-                    "1",
-                    "-temporal_aq",
-                    quality_settings.get("nvenc_temporal_aq", "0"),
-                    "-aq-strength",
-                    quality_settings.get("nvenc_aq_strength", "8"),
-                    "-rc-lookahead",
-                    quality_settings.get("nvenc_rc_lookahead", "28"),
-                    "-bf",
-                    quality_settings.get("nvenc_bframes", "3"),
-                    "-refs",
-                    quality_settings.get("nvenc_refs", "4"),
-                ],
-            )
-        elif "qsv" in selected_codec:
-            qsv_q_raw = quality_settings.get("qsv_q", "23")
-            try:
-                qsv_q = min(int(qsv_q_raw) + gpu_q_step, GPU_MAX_QUANTIZER)
-            except ValueError:
-                qsv_q = 23
-
-            cmd.extend(
-                [
-                    "-preset",
-                    quality_settings.get("qsv_preset", "medium"),
-                    "-global_quality",
-                    str(qsv_q),
-                    "-look_ahead",
-                    "1",
-                    "-look_ahead_depth",
-                    quality_settings.get("qsv_look_ahead_depth", "30"),
-                ],
-            )
-        return
-
     cmd.extend(["-preset", quality_settings.get("preset", "faster")])
     if _is_hevc_encoder(selected_codec, target_codec):
         cmd.extend(
@@ -556,8 +570,58 @@ def _add_encoder_quality_args(
                 _build_x265_params(quality_settings, usable_cores),
             ],
         )
-    else:
-        cmd.extend(["-crf", quality_settings["h264_crf"], "-x264-params", "asm=auto"])
+        return
+
+    cmd.extend(["-crf", quality_settings["h264_crf"], "-x264-params", "asm=auto"])
+
+
+def _add_encoder_quality_args(
+    cmd: list[str],
+    selected_codec: str,
+    quality_settings: dict[str, str],
+    target_codec: str,
+    usable_cores: str,
+) -> None:
+    """Append encoder-specific quality/performance tuning arguments."""
+    gpu_q_step = _parse_non_negative_int(
+        quality_settings.get("gpu_q_step", "0"),
+        default=0,
+    )
+
+    if _is_hw_encoder(selected_codec):
+        if _is_nvenc_encoder(selected_codec):
+            _add_nvenc_quality_args(cmd, quality_settings, gpu_q_step)
+        elif _is_qsv_encoder(selected_codec):
+            _add_qsv_quality_args(cmd, quality_settings, gpu_q_step)
+        return
+
+    _add_software_quality_args(
+        cmd,
+        selected_codec,
+        target_codec,
+        quality_settings,
+        usable_cores,
+    )
+
+
+def _resolve_selected_codec(
+    meta: dict[str, int | float | str],
+    settings: BuildSettings,
+    *,
+    needs_encoding: bool,
+) -> str | None:
+    """Resolve effective video encoder for the conversion command."""
+    if settings.target_codec != "original":
+        return _select_encoder(
+            settings.target_codec,
+            use_hardware=settings.use_hardware,
+        )
+    if needs_encoding:
+        return _select_encoder(
+            _source_codec_name(meta),
+            use_hardware=settings.use_hardware,
+        )
+    return None
 
 
 def _add_ios_codec_compatibility_args(
@@ -606,7 +670,7 @@ def should_retry_with_compat_audio(stderr_text: str) -> bool:
     """Return whether FFmpeg stderr indicates audio-copy/container incompatibility."""
     lowered = stderr_text.lower()
 
-    # Require at least one hard incompatibility marker to avoid retrying unrelated failures.
+    # Require a hard incompatibility marker to avoid unrelated retries.
     hard_markers = [
         "could not find tag for codec",
         "codec not currently supported in container",
@@ -710,27 +774,20 @@ def build_ffmpeg_command(
     """Build FFmpeg command for file-based conversion."""
     cmd = _base_ffmpeg_command(settings.input_path)
 
-    should_encode = False
     scale_filter, scaled = _build_scale_filter(meta, settings.target_res)
-    should_encode = should_encode or scaled
+    fps_overridden = settings.target_fps != "original"
+    codec_overridden = settings.target_codec != "original"
+    needs_encoding = scaled or fps_overridden or codec_overridden
 
-    if settings.target_fps != "original":
+    if fps_overridden:
         cmd.extend(["-r", settings.target_fps])
-        should_encode = True
 
-    selected_codec: str | None = None
-    if settings.target_codec != "original":
-        selected_codec = _select_encoder(
-            settings.target_codec,
-            use_hardware=settings.use_hardware,
-        )
-        cmd.extend(["-c:v", selected_codec])
-        should_encode = True
-    elif should_encode:
-        selected_codec = _select_encoder(
-            _source_codec_name(meta),
-            use_hardware=settings.use_hardware,
-        )
+    selected_codec = _resolve_selected_codec(
+        meta,
+        settings,
+        needs_encoding=needs_encoding,
+    )
+    if selected_codec is not None:
         cmd.extend(["-c:v", selected_codec])
     else:
         cmd.extend(["-c:v", "copy"])
@@ -784,23 +841,29 @@ OUT_TIME_MS_MICROSECOND_THRESHOLD = 1_000_000
 
 def _parse_progress_key_value(key: str, value: str) -> float | None:
     """Parse known FFmpeg -progress key/value fields into seconds."""
+    parsed: float | None = None
+
     match key:
         case "out_time_us":
-            return int(value) / MICROSECONDS_PER_SECOND if value.isdigit() else None
+            if value.isdigit():
+                parsed = int(value) / MICROSECONDS_PER_SECOND
         case "out_time_ms":
-            if not value.isdigit():
-                return None
-            raw_value = int(value)
-            # Some builds label this *_ms but emit microseconds.
-            if raw_value >= OUT_TIME_MS_MICROSECOND_THRESHOLD:
-                return raw_value / MICROSECONDS_PER_SECOND
-            return raw_value / MILLISECONDS_PER_SECOND
+            if value.isdigit():
+                raw_value = int(value)
+                # Some builds label this *_ms but emit microseconds.
+                if raw_value >= OUT_TIME_MS_MICROSECOND_THRESHOLD:
+                    parsed = raw_value / MICROSECONDS_PER_SECOND
+                else:
+                    parsed = raw_value / MILLISECONDS_PER_SECOND
         case "out_time_ns":
-            return int(value) / NANOSECONDS_PER_SECOND if value.isdigit() else None
+            if value.isdigit():
+                parsed = int(value) / NANOSECONDS_PER_SECOND
         case "out_time":
-            return _parse_hms_time(value)
+            parsed = _parse_hms_time(value)
         case _:
-            return None
+            pass
+
+    return parsed
 
 
 def parse_ffmpeg_progress(stderr_line: str) -> float | None:
